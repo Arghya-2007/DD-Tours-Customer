@@ -13,6 +13,7 @@ const Blogs = lazy(() => import("./pages/Blogs"));
 const About = lazy(() => import("./pages/About"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Login = lazy(() => import("./pages/Login"));
+const Success = lazy(() => import("./pages/Success"));
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/tours" element={<AllTours />} />
             <Route path="/tours/:id" element={<TourDetails />} />
+            <Route path="/success" element={<Success />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />

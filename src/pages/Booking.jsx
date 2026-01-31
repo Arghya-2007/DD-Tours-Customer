@@ -129,11 +129,13 @@ const Booking = () => {
         },
       };
 
-      await api.post("/bookings/book", payload);
+      const res = await api.post("/bookings/book", payload);
 
       // Success!
       setShowPaymentModal(false);
-      navigate("/profile");
+      navigate("/success", {
+        state: { booking: { id: res.data.bookingId || id } },
+      });
       // You could navigate to a /success page if you build one
     } catch (err) {
       console.error("Booking failed:", err);
