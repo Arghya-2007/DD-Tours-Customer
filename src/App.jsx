@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react"; // 1. Import Lazy & Suspense
-import MainLayout from "./components/MainLayout";
+import MainLayout from "./components/Mainlayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Loader from "./components/Loader"; // Ensure you have a Loader component
 
