@@ -1,0 +1,204 @@
+import React, { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  BookOpen,
+  Clock,
+  User,
+  ArrowRight,
+  Compass,
+  Tag,
+  Share2,
+} from "lucide-react";
+
+gsap.registerPlugin(ScrollTrigger);
+
+const Blogs = () => {
+  const container = useRef();
+
+  // --- STATIC PLACEHOLDER DATA ---
+  const dummyBlogs = [
+    {
+      id: 1,
+      title: "The Silent Peaks: Survival in the North",
+      excerpt:
+        "Scale the highest summits where oxygen is thin but the thrill is absolute. A guide to high-altitude gear.",
+      author: "Capt. D.D. Chatterjee",
+      date: "Jan 15, 2026",
+      readTime: "8 min",
+      image:
+        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop",
+      category: "Expedition",
+    },
+    {
+      id: 2,
+      title: "Jungle Protocols: Navigating the Deep Green",
+      excerpt:
+        "Hidden civilizations and ancient ruins await those brave enough to enter the Amazonian canopy.",
+      author: "Sarah Jenkins",
+      date: "Jan 28, 2026",
+      readTime: "12 min",
+      image:
+        "https://images.unsplash.com/photo-1549366021-9f761d450615?q=80&w=1000&auto=format&fit=crop",
+      category: "Survival",
+    },
+    {
+      id: 3,
+      title: "Desert Stars: Navigating the Thar at Night",
+      excerpt:
+        "When the sun goes down, the desert becomes a different planet. Learn to navigate by the constellations.",
+      author: "Marcus Thorne",
+      date: "Feb 01, 2026",
+      readTime: "6 min",
+      image:
+        "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=1000&auto=format&fit=crop",
+      category: "Navigation",
+    },
+  ];
+
+  // --- GSAP ANIMATIONS ---
+  useGSAP(
+    () => {
+      const tl = gsap.timeline();
+
+      // 1. Header Entrance
+      tl.fromTo(
+        ".blog-header",
+        { y: 50, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, ease: "power4.out" },
+      );
+
+      // 2. Blog Cards Cascade
+      gsap.fromTo(
+        ".blog-card",
+        { y: 60, opacity: 0, scale: 0.95 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.8,
+          stagger: 0.2,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: ".blog-grid",
+            start: "top 85%",
+          },
+        },
+      );
+    },
+    { scope: container },
+  );
+
+  return (
+    <div
+      ref={container}
+      className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 md:p-12 overflow-hidden"
+    >
+      {/* --- HEADER --- */}
+      <div className="blog-header max-w-7xl mx-auto mb-16 border-b border-white/10 pb-10">
+        <div className="flex items-center gap-2 text-primary mb-4">
+          <BookOpen size={24} />
+          <span className="text-xs font-bold uppercase tracking-[0.3em]">
+            The Field Journal
+          </span>
+        </div>
+        <h1 className="text-5xl md:text-7xl font-header text-white uppercase leading-none">
+          Intelligence <br />{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500">
+            & Insights
+          </span>
+        </h1>
+        <p className="text-gray-500 mt-6 max-w-xl text-lg">
+          Dispatches from the front lines of adventure. Expert gear reviews,
+          survival protocols, and mission reports.
+        </p>
+      </div>
+
+      {/* --- BLOG GRID --- */}
+      <div className="max-w-7xl mx-auto blog-grid">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {dummyBlogs.map((blog) => (
+            <div
+              key={blog.id}
+              className="blog-card group flex flex-col md:flex-row bg-[#1c1917] rounded-[2.5rem] border border-white/5 overflow-hidden hover:border-primary/50 transition-all duration-500"
+            >
+              {/* Image Side */}
+              <div className="relative md:w-2/5 h-64 md:h-auto overflow-hidden">
+                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+                <img
+                  src={blog.image}
+                  alt={blog.title}
+                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
+                />
+                <div className="absolute top-4 left-4 z-20">
+                  <span className="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                    {blog.category}
+                  </span>
+                </div>
+              </div>
+
+              {/* Content Side */}
+              <div className="md:w-3/5 p-8 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                    <span className="flex items-center gap-1 font-mono uppercase tracking-tighter">
+                      <Clock size={12} className="text-primary" /> {blog.date}
+                    </span>
+                    <span className="flex items-center gap-1 font-mono uppercase tracking-tighter">
+                      <User size={12} className="text-primary" /> {blog.author}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-header text-white uppercase mb-4 group-hover:text-primary transition-colors leading-tight">
+                    {blog.title}
+                  </h2>
+                  <p className="text-gray-400 text-sm leading-relaxed line-clamp-3">
+                    {blog.excerpt}
+                  </p>
+                </div>
+
+                <div className="mt-8 flex items-center justify-between">
+                  <button className="flex items-center gap-2 text-white font-bold text-xs uppercase tracking-widest group-hover:gap-4 transition-all">
+                    Read Report{" "}
+                    <ArrowRight size={16} className="text-primary" />
+                  </button>
+                  <div className="flex gap-4 text-gray-600">
+                    <Share2
+                      size={16}
+                      className="hover:text-white cursor-pointer transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* --- NO DATA PLACEHOLDER --- */}
+        <div className="mt-20 p-12 bg-white/5 border border-dashed border-white/10 rounded-[3rem] text-center">
+          <Compass
+            className="mx-auto text-gray-700 mb-4 animate-spin-slow"
+            size={48}
+          />
+          <h3 className="text-xl font-header text-gray-400 uppercase">
+            Incoming Dispatches
+          </h3>
+          <p className="text-gray-600 text-sm mt-2">
+            Our operatives are currently in the field. New reports arriving
+            soon.
+          </p>
+        </div>
+      </div>
+
+      {/* --- FOOTER CTA --- */}
+      <div className="max-w-7xl mx-auto mt-24 text-center">
+        <p className="text-gray-500 font-mono text-xs uppercase tracking-[0.5em] mb-4">
+          End of Transmission
+        </p>
+        <div className="w-16 h-[1px] bg-primary mx-auto"></div>
+      </div>
+    </div>
+  );
+};
+
+export default Blogs;
