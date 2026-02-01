@@ -1,124 +1,149 @@
 import jsPDF from "jspdf";
 
 export const generateTicket = (booking) => {
-  // 🔍 DEBUG: Check the Console to see what data we actually have!
-  console.log("🎟️ Generating Ticket with Data:", booking);
+  console.log("🎟️ Generating Enhanced Ticket:", booking);
 
-  // --- 1. SMART DATA EXTRACTION (Checks multiple field names) ---
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
-    format: [200, 90], // Ticket shape
+    format: [200, 90], // Standard Ticket Size
   });
 
-  // Try to find the Name
+  // --- DATA PREP ---
   const name =
-    booking.userDetails?.fullName ||
-    booking.name ||
-    booking.userName ||
-    booking.userEmail ||
-    "Guest Explorer";
-
-  // Try to find the Trip Title
-  const title =
-    booking.tripTitle ||
-    booking.title ||
-    booking.trip?.title ||
-    "Unknown Mission";
-
-  // Try to find the Date
-  const rawDate = booking.bookingDate || booking.date || booking.startDate;
-  const date = rawDate ? new Date(rawDate).toLocaleDateString() : "TBA";
-
-  // Try to find the Seats
-  const seats = booking.seats || booking.guests || booking.passengers || "1";
-
-  // Try to find the ID
-  const id = (booking.id || booking.paymentId || "000000")
-    .slice(-6)
+    booking.userDetails?.fullName || booking.name || "Guest Explorer";
+  const title = booking.tripTitle || booking.title || "Unknown Mission";
+  const date = booking.bookingDate
+    ? new Date(booking.bookingDate).toLocaleDateString()
+    : "TBA";
+  const seats = booking.seats || "1";
+  const amount = booking.totalAmount || booking.amountPaid || "0";
+  const payId = (booking.paymentId || booking.id || "CASH")
+    .slice(-8)
     .toUpperCase();
+  const phone = booking.userDetails?.phone || "N/A";
 
-  // --- 2. DRAWING THE TICKET ---
+  // Status Color Logic
+  const status = (booking.status || "CONFIRMED").toUpperCase();
 
-  // Background (Dark)
-  doc.setFillColor(20, 20, 20);
+  // --- VISUAL DESIGN ---
+
+  // 1. Dark Background
+  doc.setFillColor(20, 20, 20); // Hex #141414
   doc.rect(0, 0, 200, 90, "F");
 
-  // Orange Stripe (Left)
+  // 2. Orange Brand Stripe (Left)
   doc.setFillColor(234, 88, 12);
-  doc.rect(0, 0, 10, 90, "F");
+  doc.rect(0, 0, 12, 90, "F");
 
-  // Header
+  // 3. Status Badge (Top Right)
+  doc.setFillColor(34, 197, 94); // Green for Confirmed
+  doc.roundedRect(165, 10, 25, 6, 1, 1, "F");
+  doc.setFontSize(7);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.text(status, 177.5, 14, { align: "center" });
+
+  // --- HEADER SECTION ---
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("DD TOURS & TRAVELS", 20, 15);
+  doc.setFontSize(16);
+  doc.text("DD TOURS & TRAVELS", 25, 15);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(150, 150, 150);
-  doc.text("OFFICIAL EXPEDITION PASS", 20, 22);
+  doc.text("OFFICIAL EXPEDITION PASS", 25, 20);
 
-  const startY = 40;
+  // --- MAIN CONTENT GRID ---
+  const row1 = 35;
+  const row2 = 55;
+  const row3 = 75;
 
-  // Row 1: Name
-  doc.setFontSize(8);
+  // -- COLUMN 1 --
+  // Name
+  doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
-  doc.text("EXPLORER NAME", 20, startY);
-
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255); // White
-  doc.text(name, 20, startY + 6);
-
-  // Row 1: Mission
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("MISSION / TRIP", 80, startY);
-
-  doc.setFontSize(12);
-  doc.setTextColor(234, 88, 12); // Orange
-  doc.text(title, 80, startY + 6);
-
-  // Row 2: Date
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("LAUNCH DATE", 20, startY + 20);
-
-  doc.setFontSize(12);
+  doc.text("EXPLORER IDENTITY", 25, row1);
+  doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text(date, 20, startY + 26);
+  doc.text(name, 25, row1 + 5);
 
-  // Row 2: Crew
-  doc.setFontSize(8);
+  // Date
+  doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
-  doc.text("CREW MEMBERS", 80, startY + 20);
-
-  doc.setFontSize(12);
+  doc.text("LAUNCH DATE", 25, row2);
+  doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text(`${seats} Person(s)`, 80, startY + 26);
+  doc.text(date, 25, row2 + 5);
 
-  // --- RIGHT SIDE ---
-  // Dashed Line
-  doc.setDrawColor(60, 60, 60);
-  doc.setLineDash([2, 2], 0);
-  doc.line(150, 5, 150, 85);
-
-  // Ref ID
+  // Contact
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("CONTACT FREQUENCY", 25, row3);
   doc.setFontSize(10);
+  doc.setTextColor(200, 200, 200);
+  doc.text(phone, 25, row3 + 5);
+
+  // -- COLUMN 2 --
+  // Mission Title
+  doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
-  doc.text("REF ID", 160, 20);
+  doc.text("ASSIGNED MISSION", 80, row1);
+  doc.setFontSize(11);
+  doc.setTextColor(234, 88, 12); // Orange Accent
+  doc.text(title.substring(0, 25), 80, row1 + 5); // Limit length
 
-  doc.setFontSize(14);
+  // Crew Size
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("CREW COUNT", 80, row2);
+  doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text(`#${id}`, 160, 28);
+  doc.text(`${seats} Person(s)`, 80, row2 + 5);
 
-  // Fake QR Box
+  // Total Paid
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text("TOTAL PAID", 80, row3);
+  doc.setFontSize(11);
+  doc.setTextColor(34, 197, 94); // Green Money Color
+  doc.text(`INR ${Number(amount).toLocaleString()}`, 80, row3 + 5);
+
+  // --- RIGHT STUB (Receipt Info) ---
+  // Dashed Separator
+  doc.setDrawColor(60, 60, 60);
+  doc.setLineDash([1, 1], 0);
+  doc.line(145, 5, 145, 85);
+
+  // Stub Content
+  const stubX = 155;
+
+  // Transaction ID
+  doc.setFontSize(6);
+  doc.setTextColor(100, 100, 100);
+  doc.text("TRANSACTION ID", stubX, 30);
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text(payId, stubX, 35);
+
+  // Payment Method
+  doc.setFontSize(6);
+  doc.setTextColor(100, 100, 100);
+  doc.text("PAYMENT VIA", stubX, 45);
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text((booking.paymentMethod || "ONLINE").toUpperCase(), stubX, 50);
+
+  // Scan Text
+  doc.setFontSize(6);
+  doc.setTextColor(100, 100, 100);
+  doc.text("SCAN FOR ENTRY", stubX, 60);
+
+  // White Box for QR Code (Simulated)
   doc.setFillColor(255, 255, 255);
-  doc.rect(160, 45, 25, 25, "F");
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.text("SCAN", 166, 60);
+  doc.rect(stubX, 63, 20, 20, "F");
 
   // Save
-  doc.save(`Mission-Pass-${id}.pdf`);
+  doc.save(`Mission-Pass-${payId}.pdf`);
 };
