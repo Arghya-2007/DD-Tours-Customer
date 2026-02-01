@@ -19,7 +19,6 @@ import {
   X,
   Loader2,
   CreditCard,
-  Wallet,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -41,7 +40,25 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. FETCH DATA ---
+  // --- 1. DATA NORMALIZER (THE FIX) ---
+  // This converts messy DB data into a clean, standard format for the UI
+  const normalizeBooking = (b) => {
+    return {
+      id: b.id || b._id,
+      // Handle both naming conventions
+      title: b.tripTitle || "Unknown Expedition",
+      date: b.bookingDate || b.tripDate || b.createdAt,
+      price: b.totalAmount || b.totalPrice || 0,
+      seats: b.seats || 1,
+      status: b.status || "pending",
+      // Determine if it was paid online
+      isOnline:
+        b.paymentMethod === "online" || b.gateway === "razorpay" || b.paymentId,
+      raw: b,
+    };
+  };
+
+  // --- 2. FETCH DATA ---
   useEffect(() => {
     if (user) fetchUserData();
   }, [user]);
@@ -63,13 +80,15 @@ const Profile = () => {
         bookingsRes.status === "fulfilled" &&
         Array.isArray(bookingsRes.value.data)
       ) {
-        // Sort bookings: Newest First
-        const sortedBookings = bookingsRes.value.data.sort(
-          (a, b) =>
-            new Date(b.createdAt || b.bookingDate) -
-            new Date(a.createdAt || a.bookingDate),
+        // 1. Normalize Data
+        const cleanBookings = bookingsRes.value.data.map(normalizeBooking);
+
+        // 2. Sort: Newest First
+        const sorted = cleanBookings.sort(
+          (a, b) => new Date(b.date) - new Date(a.date),
         );
-        setBookings(sortedBookings);
+
+        setBookings(sorted);
       }
     } catch (err) {
       console.error("Error loading profile:", err);
@@ -79,7 +98,7 @@ const Profile = () => {
     }
   };
 
-  // --- 2. ANIMATIONS ---
+  // --- 3. ANIMATIONS ---
   useGSAP(() => {
     if (!loading && profileData) {
       const tl = gsap.timeline();
@@ -104,7 +123,7 @@ const Profile = () => {
     }
   }, [loading, profileData]);
 
-  // --- 3. UPDATE HANDLER ---
+  // --- 4. UPDATE HANDLER ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -122,20 +141,16 @@ const Profile = () => {
     setIsSaving(false);
   };
 
-  // --- 4. IMAGE HELPERS ---
+  // --- 5. IMAGE HELPERS ---
   const getProfileImage = () => {
     return (
       user?.photoURL ||
-      `https://ui-avatars.com/api/?name=${
-        user?.displayName || "User"
-      }&background=ea580c&color=fff`
+      `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`
     );
   };
 
   const handleImageError = (e) => {
-    e.target.src = `https://ui-avatars.com/api/?name=${
-      user?.displayName || "User"
-    }&background=ea580c&color=fff`;
+    e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
   };
 
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
@@ -159,9 +174,7 @@ const Profile = () => {
     >
       <Toaster
         position="bottom-right"
-        toastOptions={{
-          style: { background: "#333", color: "#fff" },
-        }}
+        toastOptions={{ style: { background: "#333", color: "#fff" } }}
       />
 
       <div className="max-w-6xl mx-auto space-y-8">
@@ -198,11 +211,7 @@ const Profile = () => {
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-4">
                 <span
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                    isProfileComplete
-                      ? "bg-green-500/10 text-green-500 border-green-500/20"
-                      : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                  }`}
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${isProfileComplete ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
                 >
                   {isProfileComplete ? (
                     <CheckCircle size={14} />
@@ -313,96 +322,80 @@ const Profile = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {bookings.map((booking) => {
-                  // Determine Payment Type
-                  const isOnline =
-                    booking.paymentMethod === "online" || booking.paymentId;
-                  const isPayAtOffice =
-                    booking.paymentMethod === "pay_on_arrival";
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="mission-card group bg-[#1c1917] p-6 rounded-2xl border border-white/5 hover:border-primary/50 transition-all duration-300 relative overflow-hidden"
+                  >
+                    <div className="absolute top-2 right-2 text-[10px] text-gray-700 font-mono opacity-50 select-none">
+                      #{booking.id.slice(0, 6)}
+                    </div>
 
-                  return (
-                    <div
-                      key={booking.id || booking._id}
-                      className="mission-card group bg-[#1c1917] p-6 rounded-2xl border border-white/5 hover:border-primary/50 transition-all duration-300 relative overflow-hidden"
-                    >
-                      {/* Watermark */}
-                      <div className="absolute top-2 right-2 text-[10px] text-gray-700 font-mono opacity-50 select-none">
-                        #{booking.id?.slice(0, 6) || "REF"}
-                      </div>
+                    <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <StatusBadge status={booking.status} />
+                          {booking.isOnline ? (
+                            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
+                              <CreditCard size={10} /> Online
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded">
+                              <MapPin size={10} /> Pay at Office
+                            </span>
+                          )}
+                        </div>
 
-                      <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
-                        {/* Trip Info */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <StatusBadge status={booking.status} />
+                        {/* Title using Normalized Data */}
+                        <h4 className="text-2xl font-header text-white group-hover:text-primary transition-colors">
+                          {booking.title}
+                        </h4>
 
-                            {/* PAYMENT METHOD BADGE */}
-                            {isOnline ? (
-                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
-                                <CreditCard size={10} /> Online
-                              </span>
-                            ) : (
-                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded">
-                                <MapPin size={10} /> Pay at Office
-                              </span>
-                            )}
-                          </div>
-
-                          <h4 className="text-2xl font-header text-white group-hover:text-primary transition-colors">
-                            {booking.tripTitle}
-                          </h4>
-
-                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
-                            <span className="flex items-center gap-1.5">
-                              <Calendar size={14} className="text-primary" />
-                              {new Date(
-                                booking.bookingDate || booking.tripDate,
-                              ).toLocaleDateString("en-IN", {
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
+                          <span className="flex items-center gap-1.5">
+                            <Calendar size={14} className="text-primary" />
+                            {new Date(booking.date).toLocaleDateString(
+                              "en-IN",
+                              {
                                 day: "numeric",
                                 month: "short",
                                 year: "numeric",
-                              })}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <User size={14} className="text-primary" />{" "}
-                              {booking.seats} Explorers
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Price & Action */}
-                        <div className="flex flex-row md:flex-col justify-between items-end text-right border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px]">
-                          <div>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
-                              Total Cost
-                            </p>
-                            <p className="text-2xl font-header text-white">
-                              ₹
-                              {Number(
-                                booking.totalAmount || booking.totalPrice,
-                              ).toLocaleString()}
-                            </p>
-
-                            {/* Payment Status Text */}
-                            <p
-                              className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isOnline ? "text-green-500" : "text-yellow-500"}`}
-                            >
-                              {isOnline
-                                ? "Payment Complete"
-                                : "Payment Pending"}
-                            </p>
-                          </div>
-
-                          {booking.status === "confirmed" && (
-                            <button className="mt-3 text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-gray-300 transition-colors border border-white/5">
-                              <FileText size={12} /> Download Pass
-                            </button>
-                          )}
+                              },
+                            )}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <User size={14} className="text-primary" />{" "}
+                            {booking.seats} Explorers
+                          </span>
                         </div>
                       </div>
+
+                      <div className="flex flex-row md:flex-col justify-between items-end text-right border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px]">
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
+                            Total Cost
+                          </p>
+                          {/* Price using Normalized Data */}
+                          <p className="text-2xl font-header text-white">
+                            ₹{Number(booking.price).toLocaleString()}
+                          </p>
+                          <p
+                            className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${booking.isOnline ? "text-green-500" : "text-yellow-500"}`}
+                          >
+                            {booking.isOnline
+                              ? "Payment Complete"
+                              : "Payment Pending"}
+                          </p>
+                        </div>
+                        {booking.status === "confirmed" && (
+                          <button className="mt-3 text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-gray-300 transition-colors border border-white/5">
+                            <FileText size={12} /> Download Pass
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -423,9 +416,7 @@ const Profile = () => {
               </h2>
               <button
                 onClick={() => !isSaving && setIsEditing(false)}
-                className={`p-2 -mr-2 text-gray-500 hover:text-white transition-colors ${
-                  isSaving ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`p-2 -mr-2 text-gray-500 hover:text-white transition-colors ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={isSaving}
               >
                 <X size={24} />
@@ -454,7 +445,6 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
-
                 <Input
                   label="Comms (Phone)"
                   type="tel"
@@ -519,17 +509,11 @@ const Profile = () => {
                 onClick={handleSubmit}
                 type="submit"
                 disabled={isSaving}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-wider 
-            ${
-              isSaving
-                ? "opacity-80 cursor-wait"
-                : "hover:bg-orange-600 shadow-lg shadow-orange-900/20"
-            }`}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-wider ${isSaving ? "opacity-80 cursor-wait" : "hover:bg-orange-600 shadow-lg shadow-orange-900/20"}`}
               >
                 {isSaving ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Syncing...
+                    <Loader2 size={16} className="animate-spin" /> Syncing...
                   </>
                 ) : (
                   "Save Data"
@@ -555,9 +539,7 @@ const DetailRow = ({ icon: Icon, label, value, isSecure }) => (
       <span className="text-sm text-gray-400 font-medium">{label}</span>
     </div>
     <span
-      className={`text-sm font-bold text-gray-200 ${
-        isSecure ? "font-mono tracking-wider" : ""
-      }`}
+      className={`text-sm font-bold text-gray-200 ${isSecure ? "font-mono tracking-wider" : ""}`}
     >
       {value || <span className="text-gray-600 italic">Not Assigned</span>}
     </span>
@@ -582,18 +564,14 @@ const StatusBadge = ({ status }) => {
     cancelled: "bg-red-500/10 text-red-500 border-red-500/20",
     pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
   };
-
   const icons = {
     confirmed: <CheckCircle size={12} />,
     cancelled: <XCircle size={12} />,
     pending: <Clock size={12} />,
   };
-
   return (
     <span
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-        styles[status] || styles.pending
-      }`}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.pending}`}
     >
       {icons[status] || icons.pending} {status}
     </span>
