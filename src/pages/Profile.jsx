@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { generateTicket } from "../utils/generateTicket";
 import api from "../services/api";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -389,7 +390,11 @@ const Profile = () => {
                         </div>
 
                         {booking.status === "confirmed" && (
-                          <button className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto">
+                          <button
+                            onClick={() => {
+                              generateTicket(booking);
+                            }}
+                            className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto">
                             <FileText size={12} /> Download Pass
                           </button>
                         )}
