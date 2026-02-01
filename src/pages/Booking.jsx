@@ -55,6 +55,17 @@ const Booking = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
+  // Load Razorpay Script Dynamically
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   // 1. FETCH DATA & RESTORE SESSION
   useEffect(() => {
     // Set random FOMO number (2 to 6 people)
@@ -150,41 +161,113 @@ const Booking = () => {
 
   const finalizeBooking = async () => {
     setSubmitting(true);
-    setPaymentProcessing(true);
+
+    // --- SCENARIO 1: PAY ON ARRIVAL (Direct Booking) ---
+    if (paymentMethod === "pay_on_arrival") {
+      try {
+        const payload = {
+          tripId: trip._id || trip.id,
+          seats: parseInt(guests),
+          tripTitle: trip.title,
+          bookingDate,
+          totalAmount,
+          userDetails: { ...userDetails, paymentMethod },
+          paymentStatus: "pending",
+        };
+        const res = await api.post("/bookings/book", payload); // Old direct route
+
+        localStorage.removeItem("bookingDraft");
+        navigate("/success", {
+          state: { booking: { id: res.data.bookingId } },
+        });
+      } catch (err) {
+        setError(err.response?.data?.message || "Booking failed.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // --- SCENARIO 2: ONLINE PAYMENT (Razorpay) ---
+    setPaymentProcessing(true); // Show spinner in modal
 
     try {
-      if (paymentMethod !== "pay_on_arrival") {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 1. Load Script
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        throw new Error("Razorpay SDK failed to load. Check your internet.");
       }
 
-      const payload = {
-        tripId: trip._id || trip.id,
-        seats: parseInt(guests),
-        tripTitle: trip.title,
-        bookingDate,
-        totalAmount,
-        userDetails: {
+      // 2. Create Order on Backend
+      const orderRes = await api.post("/payments/create-order", {
+        amount: totalAmount,
+      });
+      const orderData = orderRes.data; // Contains order_id
+
+      // 3. Configure Options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your Public Key
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "DD Tours",
+        description: `Expedition: ${trip.title}`,
+        image: "https://your-logo-url.com/logo.png", // Add your logo here
+        order_id: orderData.id,
+
+        // 4. HANDLER: What happens after payment
+        handler: async function (response) {
+          try {
+            // 5. Verify & Save Booking
+            const verifyRes = await api.post("/payments/verify", {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingDetails: {
+                tripId: trip._id || trip.id,
+                seats: parseInt(guests),
+                tripTitle: trip.title,
+                bookingDate,
+                totalAmount,
+                userDetails: { ...userDetails, paymentMethod },
+              },
+            });
+
+            if (verifyRes.data.success) {
+              localStorage.removeItem("bookingDraft");
+              setShowPaymentModal(false);
+              navigate("/success", {
+                state: { booking: { id: verifyRes.data.bookingId } },
+              });
+            } else {
+              throw new Error("Payment verification failed.");
+            }
+          } catch (err) {
+            setError("Payment verified failed at backend.");
+            setPaymentProcessing(false);
+          }
+        },
+        prefill: {
           name: userDetails.fullName,
           email: user.email,
-          phone: userDetails.phone,
-          address: userDetails.address,
-          aadhar: userDetails.aadharNo,
-          paymentMethod,
+          contact: userDetails.phone,
+        },
+        theme: {
+          color: "#ea580c", // Primary Orange Color
+        },
+        modal: {
+          ondismiss: function () {
+            setPaymentProcessing(false);
+            setSubmitting(false);
+          },
         },
       };
 
-      const res = await api.post("/bookings/book", payload);
-
-      // Clear draft after success
-      localStorage.removeItem("bookingDraft");
-
-      setShowPaymentModal(false);
-      navigate("/success", {
-        state: { booking: { id: res.data.bookingId || id } },
-      });
+      // 6. Open Razorpay
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
     } catch (err) {
-      console.error("Booking failed:", err);
-      setError(err.response?.data?.message || "Booking transmission failed.");
+      console.error("Payment Error:", err);
+      setError("Payment initiation failed.");
       setSubmitting(false);
       setPaymentProcessing(false);
     }
@@ -631,6 +714,6 @@ const Booking = () => {
       )}
     </div>
   );
-};;
+};;;
 
 export default Booking;
