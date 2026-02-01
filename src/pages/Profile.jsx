@@ -40,11 +40,11 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. DATA NORMALIZER ---
+  // --- 1. DATA NORMALIZER (Fixes Missing/Undefined Data) ---
   const normalizeBooking = (b) => {
     const details = b.userDetails || {};
 
-    // Strict Payment Method Check
+    // Check ALL possible indicators for online payment
     const methodRoot = (b.paymentMethod || "").toLowerCase();
     const methodNested = (details.paymentMethod || "").toLowerCase();
     const gateway = (b.gateway || "").toLowerCase();
@@ -63,7 +63,9 @@ const Profile = () => {
     return {
       id: b.id || b._id,
       title: b.tripTitle || "Unknown Expedition",
+      // Fallback for dates
       date: b.bookingDate || b.tripDate || b.createdAt,
+      // Fallback for price (Offline vs Online fields)
       price: b.totalAmount || b.totalPrice || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
@@ -95,6 +97,7 @@ const Profile = () => {
         Array.isArray(bookingsRes.value.data)
       ) {
         const cleanBookings = bookingsRes.value.data.map(normalizeBooking);
+        // Sort Newest First
         const sorted = cleanBookings.sort(
           (a, b) => new Date(b.date) - new Date(a.date),
         );
@@ -150,7 +153,6 @@ const Profile = () => {
     setIsSaving(false);
   };
 
-  // --- 5. HELPERS ---
   const getProfileImage = () =>
     user?.photoURL ||
     `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
