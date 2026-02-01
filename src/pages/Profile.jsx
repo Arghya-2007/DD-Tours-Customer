@@ -18,6 +18,8 @@ import {
   FileText,
   X,
   Loader2,
+  CreditCard,
+  Wallet,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -61,7 +63,13 @@ const Profile = () => {
         bookingsRes.status === "fulfilled" &&
         Array.isArray(bookingsRes.value.data)
       ) {
-        setBookings(bookingsRes.value.data);
+        // Sort bookings: Newest First
+        const sortedBookings = bookingsRes.value.data.sort(
+          (a, b) =>
+            new Date(b.createdAt || b.bookingDate) -
+            new Date(a.createdAt || a.bookingDate),
+        );
+        setBookings(sortedBookings);
       }
     } catch (err) {
       console.error("Error loading profile:", err);
@@ -71,27 +79,22 @@ const Profile = () => {
     }
   };
 
-  // --- 2. ANIMATIONS (FIXED with fromTo) ---
+  // --- 2. ANIMATIONS ---
   useGSAP(() => {
     if (!loading && profileData) {
       const tl = gsap.timeline();
 
-      // 1. Header Drops In (Force End State)
       tl.fromTo(
         ".profile-header",
         { y: -50, opacity: 0 },
         { y: 0, opacity: 1, duration: 1, ease: "power3.out" },
       )
-
-        // 2. Columns Slide Up
         .fromTo(
           ".dashboard-col",
           { y: 50, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.8, stagger: 0.2, ease: "power2.out" },
           "-=0.5",
         )
-
-        // 3. Mission Cards Cascade
         .fromTo(
           ".mission-card",
           { x: -20, opacity: 0 },
@@ -105,7 +108,7 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Small delay for UX
+    await new Promise((resolve) => setTimeout(resolve, 800));
     const loadingToast = toast.loading("Encrypting & Uploading...");
     try {
       const res = await api.put("/users/profile", formData);
@@ -123,12 +126,16 @@ const Profile = () => {
   const getProfileImage = () => {
     return (
       user?.photoURL ||
-      `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`
+      `https://ui-avatars.com/api/?name=${
+        user?.displayName || "User"
+      }&background=ea580c&color=fff`
     );
   };
 
   const handleImageError = (e) => {
-    e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
+    e.target.src = `https://ui-avatars.com/api/?name=${
+      user?.displayName || "User"
+    }&background=ea580c&color=fff`;
   };
 
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
@@ -158,13 +165,11 @@ const Profile = () => {
       />
 
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* --- HEADER: OPERATIVE ID CARD --- */}
+        {/* --- HEADER --- */}
         <div className="profile-header relative bg-[#1c1917] rounded-3xl p-8 border border-white/10 overflow-hidden shadow-2xl">
-          {/* Background Pattern */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-            {/* Avatar */}
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-orange-600 rounded-full blur opacity-50 group-hover:opacity-100 transition duration-500"></div>
               <img
@@ -175,16 +180,12 @@ const Profile = () => {
                 className="relative w-32 h-32 rounded-full border-4 border-[#1c1917] object-cover shadow-xl"
               />
               {isProfileComplete && (
-                <div
-                  className="absolute bottom-1 right-1 bg-green-500 text-black p-1.5 rounded-full border-4 border-[#1c1917]"
-                  title="Verified Operative"
-                >
+                <div className="absolute bottom-1 right-1 bg-green-500 text-black p-1.5 rounded-full border-4 border-[#1c1917]">
                   <Shield size={16} fill="currentColor" />
                 </div>
               )}
             </div>
 
-            {/* Info */}
             <div className="flex-1 text-center md:text-left space-y-2">
               <div>
                 <h1 className="text-4xl font-header text-white uppercase tracking-wide">
@@ -197,7 +198,11 @@ const Profile = () => {
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-4">
                 <span
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${isProfileComplete ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    isProfileComplete
+                      ? "bg-green-500/10 text-green-500 border-green-500/20"
+                      : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                  }`}
                 >
                   {isProfileComplete ? (
                     <CheckCircle size={14} />
@@ -214,7 +219,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-4">
               <button
                 onClick={() => setIsEditing(true)}
@@ -233,9 +237,8 @@ const Profile = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* --- LEFT COL: INTEL & DOCS --- */}
+          {/* --- LEFT COL: INTEL --- */}
           <div className="dashboard-col space-y-8 lg:col-span-1">
-            {/* Contact Intel */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-lg">
               <h3 className="text-xl font-header text-white mb-6 flex items-center gap-3">
                 <User size={20} className="text-primary" /> Contact Intel
@@ -260,7 +263,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Clearance Docs */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-lg">
               <h3 className="text-xl font-header text-white mb-6 flex items-center gap-3">
                 <Shield size={20} className="text-primary" /> Primary Docs
@@ -311,88 +313,127 @@ const Profile = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {bookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="mission-card group bg-[#1c1917] p-6 rounded-2xl border border-white/5 hover:border-primary/50 transition-all duration-300"
-                  >
-                    <div className="flex flex-col md:flex-row justify-between gap-6">
-                      {/* Trip Info */}
-                      <div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <StatusBadge status={booking.status} />
-                          <span className="text-gray-500 text-xs font-mono tracking-widest uppercase">
-                            ID: #{booking.id.slice(0, 8)}
-                          </span>
-                        </div>
-                        <h4 className="text-xl font-header text-white mb-2 group-hover:text-primary transition-colors">
-                          {booking.tripTitle}
-                        </h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <Calendar size={14} />{" "}
-                            {new Date(booking.tripDate).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <User size={14} /> {booking.seats} Explorers
-                          </span>
-                        </div>
+                {bookings.map((booking) => {
+                  // Determine Payment Type
+                  const isOnline =
+                    booking.paymentMethod === "online" || booking.paymentId;
+                  const isPayAtOffice =
+                    booking.paymentMethod === "pay_on_arrival";
+
+                  return (
+                    <div
+                      key={booking.id || booking._id}
+                      className="mission-card group bg-[#1c1917] p-6 rounded-2xl border border-white/5 hover:border-primary/50 transition-all duration-300 relative overflow-hidden"
+                    >
+                      {/* Watermark */}
+                      <div className="absolute top-2 right-2 text-[10px] text-gray-700 font-mono opacity-50 select-none">
+                        #{booking.id?.slice(0, 6) || "REF"}
                       </div>
 
-                      {/* Price & Action */}
-                      <div className="flex flex-row md:flex-col justify-between items-end text-right border-t md:border-t-0 border-white/10 pt-4 md:pt-0">
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
-                            Total Cost
-                          </p>
-                          <p className="text-2xl font-header text-white">
-                            ₹{Number(booking.totalPrice).toLocaleString()}
-                          </p>
+                      <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                        {/* Trip Info */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <StatusBadge status={booking.status} />
+
+                            {/* PAYMENT METHOD BADGE */}
+                            {isOnline ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
+                                <CreditCard size={10} /> Online
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded">
+                                <MapPin size={10} /> Pay at Office
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-2xl font-header text-white group-hover:text-primary transition-colors">
+                            {booking.tripTitle}
+                          </h4>
+
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar size={14} className="text-primary" />
+                              {new Date(
+                                booking.bookingDate || booking.tripDate,
+                              ).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <User size={14} className="text-primary" />{" "}
+                              {booking.seats} Explorers
+                            </span>
+                          </div>
                         </div>
-                        {booking.status === "confirmed" && (
-                          <button className="mt-2 text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-gray-300 transition-colors">
-                            <FileText size={12} /> Download Orders
-                          </button>
-                        )}
+
+                        {/* Price & Action */}
+                        <div className="flex flex-row md:flex-col justify-between items-end text-right border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px]">
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
+                              Total Cost
+                            </p>
+                            <p className="text-2xl font-header text-white">
+                              ₹
+                              {Number(
+                                booking.totalAmount || booking.totalPrice,
+                              ).toLocaleString()}
+                            </p>
+
+                            {/* Payment Status Text */}
+                            <p
+                              className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isOnline ? "text-green-500" : "text-yellow-500"}`}
+                            >
+                              {isOnline
+                                ? "Payment Complete"
+                                : "Payment Pending"}
+                            </p>
+                          </div>
+
+                          {booking.status === "confirmed" && (
+                            <button className="mt-3 text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-gray-300 transition-colors border border-white/5">
+                              <FileText size={12} /> Download Pass
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* --- EDIT MODAL (Tactical Overlay) --- */}
+      {/* --- EDIT MODAL --- */}
       {isEditing && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/90 backdrop-blur-md"
-            onClick={() => !isSaving && setIsEditing(false)} // Prevent closing while saving
+            onClick={() => !isSaving && setIsEditing(false)}
           />
-
-          {/* Modal Container */}
           <div className="relative bg-[#1c1917] w-full h-full sm:h-auto sm:max-w-2xl sm:rounded-3xl border-x border-white/10 sm:border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            {/* Fixed Header */}
             <div className="flex justify-between items-center p-6 border-b border-white/10 bg-[#1c1917] z-10">
               <h2 className="text-xl sm:text-2xl font-header text-white uppercase tracking-tight">
                 Update Personnel File
               </h2>
               <button
                 onClick={() => !isSaving && setIsEditing(false)}
-                className={`p-2 -mr-2 text-gray-500 hover:text-white transition-colors ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`p-2 -mr-2 text-gray-500 hover:text-white transition-colors ${
+                  isSaving ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 disabled={isSaving}
               >
                 <X size={24} />
               </button>
             </div>
 
-            {/* Scrollable Form Area */}
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
-                {/* Identity Card */}
                 <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
                   <img
                     src={getProfileImage()}
@@ -424,7 +465,6 @@ const Profile = () => {
                     setFormData({ ...formData, phone: e.target.value })
                   }
                 />
-
                 <Input
                   label="Date of Birth"
                   type="date"
@@ -434,7 +474,6 @@ const Profile = () => {
                     setFormData({ ...formData, dob: e.target.value })
                   }
                 />
-
                 <div className="md:col-span-2">
                   <Input
                     label="Base Address"
@@ -446,7 +485,6 @@ const Profile = () => {
                     }
                   />
                 </div>
-
                 <Input
                   label="Aadhar UID"
                   value={formData.aadharNo}
@@ -456,7 +494,6 @@ const Profile = () => {
                     setFormData({ ...formData, aadharNo: e.target.value })
                   }
                 />
-
                 <Input
                   label="PAN Number"
                   value={formData.panNo}
@@ -469,7 +506,6 @@ const Profile = () => {
               </form>
             </div>
 
-            {/* Fixed Footer with Animated Button */}
             <div className="p-6 border-t border-white/10 bg-[#1c1917] flex gap-3 z-10">
               <button
                 type="button"
@@ -479,7 +515,6 @@ const Profile = () => {
               >
                 Cancel
               </button>
-
               <button
                 onClick={handleSubmit}
                 type="submit"
@@ -509,7 +544,6 @@ const Profile = () => {
 };
 
 // --- SUB COMPONENTS ---
-
 const DetailRow = ({ icon: Icon, label, value, isSecure }) => (
   <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
     <div className="flex items-center gap-3">
@@ -521,7 +555,9 @@ const DetailRow = ({ icon: Icon, label, value, isSecure }) => (
       <span className="text-sm text-gray-400 font-medium">{label}</span>
     </div>
     <span
-      className={`text-sm font-bold text-gray-200 ${isSecure ? "font-mono tracking-wider" : ""}`}
+      className={`text-sm font-bold text-gray-200 ${
+        isSecure ? "font-mono tracking-wider" : ""
+      }`}
     >
       {value || <span className="text-gray-600 italic">Not Assigned</span>}
     </span>
@@ -555,7 +591,9 @@ const StatusBadge = ({ status }) => {
 
   return (
     <span
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${styles[status] || styles.pending}`}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
+        styles[status] || styles.pending
+      }`}
     >
       {icons[status] || icons.pending} {status}
     </span>
