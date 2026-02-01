@@ -19,8 +19,7 @@ import {
   X,
   Loader2,
   CreditCard,
-  Wallet,
-  Smartphone, // For UPI Icon
+  Smartphone,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -41,18 +40,16 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. BULLETPROOF DATA NORMALIZER ---
+  // --- 1. DATA NORMALIZER ---
   const normalizeBooking = (b) => {
-    // Extract nested details safely
     const details = b.userDetails || {};
 
-    // Check ALL possible payment indicators
+    // Strict Payment Method Check
     const methodRoot = (b.paymentMethod || "").toLowerCase();
     const methodNested = (details.paymentMethod || "").toLowerCase();
     const gateway = (b.gateway || "").toLowerCase();
     const paymentId = b.paymentId;
 
-    // Strict Logic: It is ONLINE if any of these are true
     const isOnline =
       methodRoot === "online" ||
       methodRoot === "upi" ||
@@ -70,7 +67,7 @@ const Profile = () => {
       price: b.totalAmount || b.totalPrice || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
-      isOnline: isOnline, // <--- This will now be correct
+      isOnline: isOnline,
       raw: b,
     };
   };
@@ -97,7 +94,6 @@ const Profile = () => {
         bookingsRes.status === "fulfilled" &&
         Array.isArray(bookingsRes.value.data)
       ) {
-        // Normalize & Sort
         const cleanBookings = bookingsRes.value.data.map(normalizeBooking);
         const sorted = cleanBookings.sort(
           (a, b) => new Date(b.date) - new Date(a.date),
@@ -332,13 +328,12 @@ const Profile = () => {
                       #{booking.id.slice(0, 6)}
                     </div>
 
+                    {/* --- THE FIX: Changed to 'flex-col' for mobile by default --- */}
                     <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                       {/* Trip Info */}
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <StatusBadge status={booking.status} />
-
-                          {/* DYNAMIC PAYMENT BADGE */}
                           {booking.isOnline ? (
                             <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
                               <Smartphone size={10} /> Online
@@ -372,8 +367,9 @@ const Profile = () => {
                         </div>
                       </div>
 
-                      {/* Price & Action: STACKED FOR MOBILE */}
-                      <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px] gap-4">
+                      {/* --- THE FIX: Price & Action --- */}
+                      {/* 'flex-col' ensures vertical stacking on mobile. 'md:items-end' aligns right on desktop */}
+                      <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[160px] gap-4">
                         <div className="text-left md:text-right w-full">
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
                             Total Cost
@@ -381,7 +377,6 @@ const Profile = () => {
                           <p className="text-2xl font-header text-white">
                             ₹{Number(booking.price).toLocaleString()}
                           </p>
-
                           <p
                             className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${booking.isOnline ? "text-green-500" : "text-yellow-500"}`}
                           >
@@ -390,8 +385,9 @@ const Profile = () => {
                               : "PAYMENT PENDING"}
                           </p>
                         </div>
+
                         {booking.status === "confirmed" && (
-                          <button className="text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto justify-center">
+                          <button className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto">
                             <FileText size={12} /> Download Pass
                           </button>
                         )}
