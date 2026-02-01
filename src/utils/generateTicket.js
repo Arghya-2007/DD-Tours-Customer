@@ -1,22 +1,54 @@
 import jsPDF from "jspdf";
 
 export const generateTicket = (booking) => {
+  // 🔍 DEBUG: Check the Console to see what data we actually have!
+  console.log("🎟️ Generating Ticket with Data:", booking);
+
+  // --- 1. SMART DATA EXTRACTION (Checks multiple field names) ---
   const doc = new jsPDF({
     orientation: "landscape",
     unit: "mm",
-    format: [200, 90], // Ticket shape (Long & Short)
+    format: [200, 90], // Ticket shape
   });
 
-  // --- BACKGROUND & STYLE ---
-  // Dark Background
-  doc.setFillColor(20, 20, 20); // Hex #141414
+  // Try to find the Name
+  const name =
+    booking.userDetails?.fullName ||
+    booking.name ||
+    booking.userName ||
+    booking.userEmail ||
+    "Guest Explorer";
+
+  // Try to find the Trip Title
+  const title =
+    booking.tripTitle ||
+    booking.title ||
+    booking.trip?.title ||
+    "Unknown Mission";
+
+  // Try to find the Date
+  const rawDate = booking.bookingDate || booking.date || booking.startDate;
+  const date = rawDate ? new Date(rawDate).toLocaleDateString() : "TBA";
+
+  // Try to find the Seats
+  const seats = booking.seats || booking.guests || booking.passengers || "1";
+
+  // Try to find the ID
+  const id = (booking.id || booking.paymentId || "000000")
+    .slice(-6)
+    .toUpperCase();
+
+  // --- 2. DRAWING THE TICKET ---
+
+  // Background (Dark)
+  doc.setFillColor(20, 20, 20);
   doc.rect(0, 0, 200, 90, "F");
 
-  // Orange Accent Bar (Left)
-  doc.setFillColor(234, 88, 12); // Primary Orange
+  // Orange Stripe (Left)
+  doc.setFillColor(234, 88, 12);
   doc.rect(0, 0, 10, 90, "F");
 
-  // --- HEADER ---
+  // Header
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
@@ -27,72 +59,66 @@ export const generateTicket = (booking) => {
   doc.setTextColor(150, 150, 150);
   doc.text("OFFICIAL EXPEDITION PASS", 20, 22);
 
-  // --- MISSION DETAILS (Left Side) ---
   const startY = 40;
 
-  // Label: Explorer
+  // Row 1: Name
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("EXPLORER NAME", 20, startY);
-  // Value
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  doc.text(
-    booking.userDetails?.fullName || booking.userEmail || "Guest",
-    20,
-    startY + 6,
-  );
 
-  // Label: Mission
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255); // White
+  doc.text(name, 20, startY + 6);
+
+  // Row 1: Mission
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("MISSION / TRIP", 80, startY);
-  // Value
-  doc.setFontSize(12);
-  doc.setTextColor(234, 88, 12); // Orange Text
-  doc.text(booking.tripTitle || "Unknown Mission", 80, startY + 6);
 
-  // Label: Date
+  doc.setFontSize(12);
+  doc.setTextColor(234, 88, 12); // Orange
+  doc.text(title, 80, startY + 6);
+
+  // Row 2: Date
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("LAUNCH DATE", 20, startY + 20);
-  // Value
+
   doc.setFontSize(12);
   doc.setTextColor(255, 255, 255);
-  doc.text(booking.bookingDate || "TBA", 20, startY + 26);
+  doc.text(date, 20, startY + 26);
 
-  // Label: Crew Size
+  // Row 2: Crew
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.text("CREW MEMBERS", 80, startY + 20);
-  // Value
+
   doc.setFontSize(12);
   doc.setTextColor(255, 255, 255);
-  doc.text(`${booking.seats} Person(s)`, 80, startY + 26);
+  doc.text(`${seats} Person(s)`, 80, startY + 26);
 
-  // --- RIGHT SIDE (Stub) ---
-  // Dashed Line Separator
+  // --- RIGHT SIDE ---
+  // Dashed Line
   doc.setDrawColor(60, 60, 60);
   doc.setLineDash([2, 2], 0);
   doc.line(150, 5, 150, 85);
 
-  // Booking Ref (Rotated or Big)
+  // Ref ID
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text("REF ID", 160, 20);
 
   doc.setFontSize(14);
   doc.setTextColor(255, 255, 255);
-  const shortId = (booking.id || "000").slice(-6).toUpperCase();
-  doc.text(`#${shortId}`, 160, 28);
+  doc.text(`#${id}`, 160, 28);
 
-  // Fake QR Code Box
+  // Fake QR Box
   doc.setFillColor(255, 255, 255);
   doc.rect(160, 45, 25, 25, "F");
   doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);
   doc.text("SCAN", 166, 60);
 
-  // Save File
-  doc.save(`Mission-Pass-${shortId}.pdf`);
+  // Save
+  doc.save(`Mission-Pass-${id}.pdf`);
 };
