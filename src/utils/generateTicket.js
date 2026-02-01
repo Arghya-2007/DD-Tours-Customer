@@ -1,8 +1,7 @@
 import jsPDF from "jspdf";
 
 export const generateTicket = (booking) => {
-  // 🔍 DEBUG: Look at the console when you click "Download"
-  console.log("🎟️ Generating Ticket for:", booking);
+  console.log("🎟️ Generating Ticket with MATCHED data:", booking);
 
   const doc = new jsPDF({
     orientation: "landscape",
@@ -10,62 +9,68 @@ export const generateTicket = (booking) => {
     format: [200, 90],
   });
 
-  // --- 1. ROBUST DATA FETCHING ---
+  // --- 1. DATA MAPPING (The Fix) ---
+  // We define "sources" to look in both the root and the 'raw' nest
+  const raw = booking.raw || {};
+  const userDetails = booking.userDetails || raw.userDetails || {};
 
-  // NAME: Check userDetails first, then top-level name, then email
-  const name =
-    booking.userDetails?.fullName ||
-    booking.name ||
-    booking.userEmail ||
-    booking.email ||
-    "Guest Explorer";
+  // NAME: Look in the mapped userDetails object
+  const name = userDetails.fullName || booking.name || "Guest Explorer";
 
-  // TITLE: Check tripTitle, then generic title
-  const title = booking.tripTitle || booking.title || "Mission: Unknown";
+  // TITLE: Root title ("The Hill Station") OR raw.tripTitle
+  const title =
+    booking.title || raw.tripTitle || booking.tripTitle || "Unknown Mission";
 
-  // DATE: Check bookingDate, then date, then createdAt, then Today
-  let rawDate = booking.bookingDate || booking.date || booking.createdAt;
-  // If it's a Firestore Timestamp (has .seconds), convert it
-  if (rawDate && rawDate.seconds) {
-    rawDate = new Date(rawDate.seconds * 1000);
-  }
-  const dateStr = rawDate
-    ? new Date(rawDate).toLocaleDateString()
-    : new Date().toLocaleDateString();
+  // DATE: Root date ("2026-02-25") OR raw.tripDate
+  const dateStr = booking.date || raw.tripDate || booking.bookingDate || "TBA";
 
-  // AMOUNT: Check totalAmount, amountPaid, or amount
-  const rawAmount =
-    booking.totalAmount || booking.amountPaid || booking.amount || 0;
-  const amountStr = `INR ${Number(rawAmount).toLocaleString()}`;
+  // SEATS: Root seats (1) OR raw.seats
+  const seats = booking.seats || raw.seats || "1";
 
-  // CONTACT: Check phone inside userDetails, or top-level phone
-  const phone = booking.userDetails?.phone || booking.phone || "N/A";
+  // PRICE: Root price (10000) OR raw.totalPrice
+  const rawPrice = booking.price || raw.totalPrice || booking.totalAmount || 0;
+  const priceDisplay = `INR ${Number(rawPrice).toLocaleString()}`;
 
-  // ID: Use Payment ID or Doc ID
-  const idRaw = booking.paymentId || booking.id || "OFFLINE";
+  // PHONE: userDetails.phone ("9679812235")
+  const phone = userDetails.phone || booking.phone || "N/A";
+
+  // PAYMENT METHOD: userDetails.paymentMethod ("pay_on_arrival")
+  const methodRaw =
+    userDetails.paymentMethod ||
+    raw.paymentMethod ||
+    booking.paymentMethod ||
+    "OFFLINE";
+  const methodDisplay = methodRaw.replace(/_/g, " ").toUpperCase(); // Turns "pay_on_arrival" -> "PAY ON ARRIVAL"
+
+  // ID: Root id ("uH74...") OR raw.id
+  // We use the Document ID because "pay_on_arrival" usually doesn't have a paymentId
+  const idRaw = booking.id || raw.id || "REF000";
   const idDisplay = idRaw.slice(-8).toUpperCase();
 
-  // --- 2. DESIGN (Dark Theme) ---
+  // STATUS
+  const statusRaw = booking.status || raw.status || "CONFIRMED";
+  const statusDisplay = statusRaw.toUpperCase();
+
+  // --- 2. PDF DESIGN (High-Tech Dark Theme) ---
 
   // Background
-  doc.setFillColor(20, 20, 20);
+  doc.setFillColor(20, 20, 20); // Dark Grey
   doc.rect(0, 0, 200, 90, "F");
 
-  // Orange Stripe
+  // Accent Stripe (Orange)
   doc.setFillColor(234, 88, 12);
   doc.rect(0, 0, 12, 90, "F");
 
-  // Status Pill (Top Right)
-  const statusText = (booking.status || "CONFIRMED").toUpperCase();
+  // Status Badge
   const statusColor =
-    statusText === "CONFIRMED" ? [34, 197, 94] : [234, 179, 8]; // Green or Yellow
-
+    statusDisplay === "CONFIRMED" ? [34, 197, 94] : [234, 179, 8];
   doc.setFillColor(...statusColor);
   doc.roundedRect(165, 10, 25, 6, 1, 1, "F");
+
   doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
-  doc.text(statusText, 177.5, 14, { align: "center" });
+  doc.text(statusDisplay, 177.5, 14, { align: "center" });
 
   // Header
   doc.setTextColor(255, 255, 255);
@@ -78,14 +83,15 @@ export const generateTicket = (booking) => {
   doc.setTextColor(150, 150, 150);
   doc.text("OFFICIAL EXPEDITION PASS", 25, 20);
 
-  // --- GRID LAYOUT ---
+  // Layout Grid
   const col1 = 25;
   const col2 = 85;
   const row1 = 35;
   const row2 = 55;
   const row3 = 75;
 
-  // -- COL 1 --
+  // -- COLUMN 1 --
+  // Name
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.text("EXPLORER IDENTITY", col1, row1);
@@ -93,13 +99,15 @@ export const generateTicket = (booking) => {
   doc.setTextColor(255, 255, 255);
   doc.text(String(name).substring(0, 25), col1, row1 + 5);
 
+  // Date
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.text("LAUNCH DATE", col1, row2);
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text(dateStr, col1, row2 + 5);
+  doc.text(String(dateStr), col1, row2 + 5);
 
+  // Phone
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.text("CONTACT FREQUENCY", col1, row3);
@@ -107,55 +115,60 @@ export const generateTicket = (booking) => {
   doc.setTextColor(200, 200, 200);
   doc.text(String(phone), col1, row3 + 5);
 
-  // -- COL 2 --
+  // -- COLUMN 2 --
+  // Title
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.text("ASSIGNED MISSION", col2, row1);
   doc.setFontSize(11);
-  doc.setTextColor(234, 88, 12);
+  doc.setTextColor(234, 88, 12); // Orange text
   doc.text(String(title).substring(0, 25), col2, row1 + 5);
 
+  // Seats
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
   doc.text("CREW COUNT", col2, row2);
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  const seats = booking.seats || booking.passengers || "1";
   doc.text(`${seats} Person(s)`, col2, row2 + 5);
 
+  // Price
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
-  doc.text("TOTAL PAID", col2, row3);
+  doc.text("TOTAL ESTIMATE", col2, row3);
   doc.setFontSize(11);
-  doc.setTextColor(34, 197, 94);
-  doc.text(amountStr, col2, row3 + 5);
+  doc.setTextColor(34, 197, 94); // Green text
+  doc.text(priceDisplay, col2, row3 + 5);
 
-  // --- STUB (Right Side) ---
+  // -- STUB (Right Side) --
   doc.setDrawColor(60, 60, 60);
   doc.setLineDash([1, 1], 0);
   doc.line(145, 5, 145, 85);
 
   const stubX = 155;
+
+  // Ref ID
   doc.setFontSize(6);
   doc.setTextColor(100, 100, 100);
-  doc.text("TRANSACTION ID", stubX, 35);
+  doc.text("BOOKING REF", stubX, 35);
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
   doc.text(idDisplay, stubX, 40);
 
+  // Payment Method
   doc.setFontSize(6);
   doc.setTextColor(100, 100, 100);
-  doc.text("PAYMENT METHOD", stubX, 50);
-  doc.setFontSize(9);
+  doc.text("PAYMENT MODE", stubX, 50);
+  doc.setFontSize(8); // Slightly smaller to fit "PAY ON ARRIVAL"
   doc.setTextColor(255, 255, 255);
-  doc.text((booking.paymentMethod || "ONLINE").toUpperCase(), stubX, 55);
+  doc.text(methodDisplay, stubX, 55);
 
-  // Fake QR
-  doc.setFillColor(255, 255, 255);
-  doc.rect(stubX, 62, 20, 20, "F");
+  // Scan Code
   doc.setFontSize(6);
-  doc.setTextColor(0, 0, 0);
-  doc.text("SCAN FOR ENTRY", stubX + 2, 85);
+  doc.setTextColor(100, 100, 100);
+  doc.text("SCAN FOR ENTRY", stubX, 65);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(stubX, 68, 15, 15, "F");
 
   doc.save(`Mission-Pass-${idDisplay}.pdf`);
 };
