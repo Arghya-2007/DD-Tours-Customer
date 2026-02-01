@@ -159,6 +159,7 @@ const Booking = () => {
       try {
         const payload = {
           tripId: trip._id || trip.id,
+          userId: user.uid, // Ensure ID is sent here too
           seats: parseInt(guests),
           tripTitle: trip.title,
           bookingDate,
@@ -208,13 +209,21 @@ const Booking = () => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+
+              // 👇 THE CRITICAL FIX: Adding User Identity to Online Payment
               bookingDetails: {
                 tripId: trip._id || trip.id,
+                userId: user.uid, // <--- THIS WAS MISSING
+                userEmail: user.email,
                 seats: parseInt(guests),
                 tripTitle: trip.title,
                 bookingDate,
                 totalAmount,
-                userDetails: { ...userDetails, paymentMethod },
+                userDetails: {
+                  ...userDetails,
+                  paymentMethod,
+                  email: user.email,
+                },
               },
             });
 
@@ -589,7 +598,7 @@ const Booking = () => {
 
       {/* --- 4. PAYMENT MODAL OVERLAY --- */}
       {/* CRITICAL: This modal now only handles the "Processing" state. 
-         Razorpay opens its own secure iframe on top of this. 
+          Razorpay opens its own secure iframe on top of this. 
       */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
