@@ -14,13 +14,13 @@ import {
   AlertCircle,
   X,
   Lock,
-  MessageCircle, // WhatsApp Icon
+  MessageCircle,
   Check,
-  Eye, // For FOMO
+  Eye,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
-const WHATSAPP_NUMBER = "919679812235"; // REPLACE WITH YOUR BUSINESS NUMBER
+const WHATSAPP_NUMBER = "919679812235";
 const COMPANY_NAME = "DD Tours & Travels";
 
 const Booking = () => {
@@ -33,7 +33,7 @@ const Booking = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [viewers, setViewers] = useState(3); // FOMO State
+  const [viewers, setViewers] = useState(3);
 
   // --- FORM STATE ---
   const [guests, setGuests] = useState(1);
@@ -48,7 +48,6 @@ const Booking = () => {
     aadharNo: "",
   });
 
-  // Validation State: null = untouhed, true = valid, false = invalid
   const [isPhoneValid, setIsPhoneValid] = useState(null);
 
   // --- PAYMENT MODAL STATE ---
@@ -68,7 +67,6 @@ const Booking = () => {
 
   // 1. FETCH DATA & RESTORE SESSION
   useEffect(() => {
-    // Set random FOMO number (2 to 6 people)
     setViewers(Math.floor(Math.random() * 5) + 2);
 
     const loadData = async () => {
@@ -84,15 +82,13 @@ const Booking = () => {
         if (tripData.expectedDate)
           setBookingDate(tripData.expectedDate.split("T")[0]);
 
-        // A. FORM PERSISTENCE LOGIC
-        // Priority: 1. LocalStorage (Unfinished draft) -> 2. Database Profile -> 3. Google Auth -> 4. Empty
+        // Persistence Logic
         const savedDraft = localStorage.getItem("bookingDraft");
         const profile = profileRes.data || {};
 
         if (savedDraft) {
           const draft = JSON.parse(savedDraft);
           setUserDetails(draft);
-          // Re-validate phone if loaded from draft
           if (draft.phone) validatePhone(draft.phone);
         } else {
           setUserDetails({
@@ -113,23 +109,18 @@ const Booking = () => {
     if (user) loadData();
   }, [id, user]);
 
-  // 2. REAL-TIME SAVE & VALIDATION HELPERS
+  // 2. VALIDATION HELPERS
   const validatePhone = (number) => {
-    const phoneRegex = /^[6-9]\d{9}$/; // Basic Indian Mobile Number Validation
+    const phoneRegex = /^[6-9]\d{9}$/;
     setIsPhoneValid(phoneRegex.test(number));
   };
 
   const handleUserChange = (e) => {
     const { name, value } = e.target;
     const updatedDetails = { ...userDetails, [name]: value };
-
-    // Update State
     setUserDetails(updatedDetails);
-
-    // Save to LocalStorage (Persistence)
     localStorage.setItem("bookingDraft", JSON.stringify(updatedDetails));
 
-    // Real-time Validation for Phone
     if (name === "phone") {
       validatePhone(value);
     }
@@ -149,20 +140,21 @@ const Booking = () => {
     if (!isPhoneValid)
       return setError("A valid contact frequency (Phone) is required.");
 
-    // Clear draft on successful submit attempt start
-    // localStorage.removeItem("bookingDraft"); // Optional: clear here or after success
-
+    // Decision Logic
     if (paymentMethod === "pay_on_arrival") {
-      finalizeBooking();
+      finalizeBooking(); // Direct API Call
     } else {
+      // For Online Payment, we open the modal which shows "Processing"
+      // and immediately triggers Razorpay
       setShowPaymentModal(true);
+      finalizeBooking();
     }
   };
 
   const finalizeBooking = async () => {
     setSubmitting(true);
 
-    // --- SCENARIO 1: PAY ON ARRIVAL (Direct Booking) ---
+    // --- SCENARIO 1: PAY ON ARRIVAL ---
     if (paymentMethod === "pay_on_arrival") {
       try {
         const payload = {
@@ -174,7 +166,7 @@ const Booking = () => {
           userDetails: { ...userDetails, paymentMethod },
           paymentStatus: "pending",
         };
-        const res = await api.post("/bookings/book", payload); // Old direct route
+        const res = await api.post("/bookings/book", payload);
 
         localStorage.removeItem("bookingDraft");
         navigate("/success", {
@@ -189,35 +181,29 @@ const Booking = () => {
     }
 
     // --- SCENARIO 2: ONLINE PAYMENT (Razorpay) ---
-    setPaymentProcessing(true); // Show spinner in modal
+    setPaymentProcessing(true); // Shows the spinner in our React Modal
 
     try {
-      // 1. Load Script
       const isLoaded = await loadRazorpayScript();
       if (!isLoaded) {
         throw new Error("Razorpay SDK failed to load. Check your internet.");
       }
 
-      // 2. Create Order on Backend
       const orderRes = await api.post("/payments/create-order", {
         amount: totalAmount,
       });
-      const orderData = orderRes.data; // Contains order_id
+      const orderData = orderRes.data;
 
-      // 3. Configure Options
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your Public Key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: orderData.currency,
         name: "DD Tours",
         description: `Expedition: ${trip.title}`,
-        image: "https://your-logo-url.com/logo.png", // Add your logo here
+        image: "https://your-logo-url.com/logo.png", // Replace with your URL
         order_id: orderData.id,
-
-        // 4. HANDLER: What happens after payment
         handler: async function (response) {
           try {
-            // 5. Verify & Save Booking
             const verifyRes = await api.post("/payments/verify", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -244,6 +230,7 @@ const Booking = () => {
           } catch (err) {
             setError("Payment verified failed at backend.");
             setPaymentProcessing(false);
+            setSubmitting(false);
           }
         },
         prefill: {
@@ -252,17 +239,17 @@ const Booking = () => {
           contact: userDetails.phone,
         },
         theme: {
-          color: "#ea580c", // Primary Orange Color
+          color: "#ea580c",
         },
         modal: {
           ondismiss: function () {
             setPaymentProcessing(false);
             setSubmitting(false);
+            setShowPaymentModal(false); // Close our modal if they close Razorpay
           },
         },
       };
 
-      // 6. Open Razorpay
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
     } catch (err) {
@@ -270,11 +257,11 @@ const Booking = () => {
       setError("Payment initiation failed.");
       setSubmitting(false);
       setPaymentProcessing(false);
+      setShowPaymentModal(false);
     }
   };
 
-  // --- WHATSAPP LINK GENERATOR ---
-  // --- WHATSAPP LINK GENERATOR (FIXED) ---
+  // --- WHATSAPP LINK ---
   const whatsappUrl = trip
     ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
         `Hi ${COMPANY_NAME}, I'm interested in the '${trip.title}' expedition for ${guests} people. Can you help me with some details before I book?`,
@@ -343,7 +330,7 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* 2. EXPLORER DATA (With Validation) */}
+            {/* 2. EXPLORER DATA */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <ShieldCheck className="text-primary" size={20} /> Explorer Data
@@ -363,7 +350,6 @@ const Booking = () => {
                   />
                 </div>
 
-                {/* B. REAL-TIME VALIDATION FIELD */}
                 <div className="space-y-2 relative">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500 flex justify-between">
                     Phone Number
@@ -425,6 +411,7 @@ const Booking = () => {
                 <Wallet className="text-primary" size={20} /> Payment Method
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* UPI Option */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "upi" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -445,6 +432,7 @@ const Booking = () => {
                   <span className="font-bold text-sm">UPI / QR</span>
                 </label>
 
+                {/* Card Option */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "card" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -467,6 +455,7 @@ const Booking = () => {
                   <span className="font-bold text-sm">Credit Card</span>
                 </label>
 
+                {/* Pay on Arrival Option */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "pay_on_arrival" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -491,7 +480,7 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* WHATSAPP TRUST BUILDER */}
+            {/* WHATSAPP */}
             <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="bg-green-500 p-2 rounded-full text-black">
@@ -502,7 +491,7 @@ const Booking = () => {
                     Have doubts about this Tour?
                   </h4>
                   <p className="text-gray-400 text-xs">
-                    Chat with Menagement Team directly before booking.
+                    Chat with Management Team directly before booking.
                   </p>
                 </div>
               </div>
@@ -528,16 +517,16 @@ const Booking = () => {
               className="w-full py-5 bg-primary hover:bg-orange-600 text-white font-bold text-lg rounded-full shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all transform hover:scale-[1.01]"
             >
               {submitting
-                ? "Initiating..."
+                ? "Processing..."
                 : `Confirm & Pay ₹${totalAmount.toLocaleString()}`}
             </button>
           </form>
         </div>
 
-        {/* --- RIGHT: ORDER SUMMARY (Sticky) --- */}
+        {/* --- RIGHT: ORDER SUMMARY --- */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-2xl">
-            {/* C. FOMO BADGE */}
+            {/* FOMO BADGE */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg flex items-center gap-1 animate-pulse">
               <Eye size={12} /> {viewers} Others Viewing
             </div>
@@ -545,9 +534,10 @@ const Booking = () => {
             <h3 className="text-xl font-header text-white mb-6">
               Manifest Summary
             </h3>
-
+            {/* ... Summary Content ... */}
             <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
+                {/* You can add actual image here later */}
                 <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                   IMG
                 </div>
@@ -598,122 +588,31 @@ const Booking = () => {
       </div>
 
       {/* --- 4. PAYMENT MODAL OVERLAY --- */}
+      {/* CRITICAL: This modal now only handles the "Processing" state. 
+         Razorpay opens its own secure iframe on top of this. 
+      */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/90 backdrop-blur-sm"
-            onClick={() => !paymentProcessing && setShowPaymentModal(false)}
-          />
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
 
           <div className="relative bg-[#1c1917] border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
-            {/* Close Button */}
-            {!paymentProcessing && (
-              <button
-                onClick={() => setShowPaymentModal(false)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-white"
-              >
-                <X size={24} />
-              </button>
-            )}
-
-            {/* HEADER */}
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-header text-white mb-2">
-                Complete Payment
-              </h3>
-              <p className="text-gray-400">
-                Total Amount:{" "}
-                <span className="text-primary font-bold">
-                  ₹{totalAmount.toLocaleString()}
-                </span>
+            <div className="py-10 flex flex-col items-center text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+              <h4 className="text-white font-bold text-lg">
+                Connecting to Secure Gateway
+              </h4>
+              <p className="text-gray-500 text-sm mt-2">
+                Please wait while we initialize Razorpay...
+              </p>
+              <p className="text-xs text-gray-600 mt-4">
+                Do not refresh the page.
               </p>
             </div>
-
-            {/* DYNAMIC CONTENT BASED ON METHOD */}
-            {paymentProcessing ? (
-              <div className="py-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-                <h4 className="text-white font-bold text-lg">
-                  Processing Transaction
-                </h4>
-                <p className="text-gray-500 text-sm mt-2">
-                  Do not close this window...
-                </p>
-              </div>
-            ) : paymentMethod === "upi" ? (
-              <div className="text-center space-y-6">
-                {/* WhatsApp Pre-check could also be here if desired */}
-                <div className="bg-white p-4 rounded-xl inline-block">
-                  <QrCode size={150} className="text-black" />
-                </div>
-                <p className="text-sm text-gray-400">
-                  Scan with GPay, Paytm, or PhonePe
-                </p>
-                <button
-                  onClick={finalizeBooking}
-                  className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors"
-                >
-                  I Have Paid
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs text-gray-500 font-bold uppercase">
-                    Card Number
-                  </label>
-                  <div className="flex items-center bg-black/30 border border-white/10 rounded-xl px-4 py-3">
-                    <CreditCard size={20} className="text-gray-500 mr-3" />
-                    <input
-                      type="text"
-                      placeholder="0000 0000 0000 0000"
-                      className="bg-transparent text-white w-full outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs text-gray-500 font-bold uppercase">
-                      Expiry
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-gray-500 font-bold uppercase">
-                      CVV
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="123"
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={finalizeBooking}
-                  className="w-full py-4 bg-primary hover:bg-orange-600 text-white font-bold rounded-xl transition-colors mt-4"
-                >
-                  Pay Securely
-                </button>
-              </div>
-            )}
-
-            {!paymentProcessing && (
-              <div className="mt-6 text-center">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest flex justify-center items-center gap-2">
-                  <Lock size={10} /> 256-Bit SSL Encrypted
-                </p>
-              </div>
-            )}
           </div>
         </div>
       )}
     </div>
   );
-};;;
+};
 
 export default Booking;
