@@ -3,7 +3,7 @@ import {
   Compass,
   Facebook,
   Instagram,
-  Twitter,
+  MessageCircle as Message,
   Youtube,
   Mail,
   MapPin,
@@ -23,7 +23,7 @@ const Footer = () => {
             <div className="flex items-center gap-3 text-primary mb-6">
               <Compass size={32} strokeWidth={2} />
               <h2 className="text-2xl font-header tracking-wide text-white uppercase">
-                DD Tours
+                DD Tours & Travels
               </h2>
             </div>
             <p className="text-gray-400 leading-relaxed mb-6">
@@ -31,7 +31,7 @@ const Footer = () => {
               map behind and follow your instinct.
             </p>
             <div className="flex gap-4">
-              {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
+              {[Instagram, Message, Facebook, Youtube].map((Icon, i) => (
                 <a
                   key={i}
                   href="#"

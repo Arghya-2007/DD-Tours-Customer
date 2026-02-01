@@ -14,7 +14,14 @@ import {
   AlertCircle,
   X,
   Lock,
+  MessageCircle, // WhatsApp Icon
+  Check,
+  Eye, // For FOMO
 } from "lucide-react";
+
+// --- CONFIGURATION ---
+const WHATSAPP_NUMBER = "919679812235"; // REPLACE WITH YOUR BUSINESS NUMBER
+const COMPANY_NAME = "DD Tours & Travels";
 
 const Booking = () => {
   const { id } = useParams();
@@ -26,13 +33,14 @@ const Booking = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [viewers, setViewers] = useState(3); // FOMO State
 
   // --- FORM STATE ---
   const [guests, setGuests] = useState(1);
   const [bookingDate, setBookingDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("pay_on_arrival");
 
-  // --- USER DETAILS ---
+  // --- USER DETAILS & VALIDATION ---
   const [userDetails, setUserDetails] = useState({
     fullName: "",
     phone: "",
@@ -40,18 +48,24 @@ const Booking = () => {
     aadharNo: "",
   });
 
+  // Validation State: null = untouhed, true = valid, false = invalid
+  const [isPhoneValid, setIsPhoneValid] = useState(null);
+
   // --- PAYMENT MODAL STATE ---
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
-  // 1. FETCH DATA
+  // 1. FETCH DATA & RESTORE SESSION
   useEffect(() => {
+    // Set random FOMO number (2 to 6 people)
+    setViewers(Math.floor(Math.random() * 5) + 2);
+
     const loadData = async () => {
       try {
         setLoading(true);
         const [tripRes, profileRes] = await Promise.all([
           api.get(`/trips/${id}`),
-          api.get("/users/profile").catch(() => ({ data: {} })), // Handle no profile gracefully
+          api.get("/users/profile").catch(() => ({ data: {} })),
         ]);
 
         const tripData = tripRes.data.trip || tripRes.data;
@@ -59,13 +73,25 @@ const Booking = () => {
         if (tripData.expectedDate)
           setBookingDate(tripData.expectedDate.split("T")[0]);
 
+        // A. FORM PERSISTENCE LOGIC
+        // Priority: 1. LocalStorage (Unfinished draft) -> 2. Database Profile -> 3. Google Auth -> 4. Empty
+        const savedDraft = localStorage.getItem("bookingDraft");
         const profile = profileRes.data || {};
-        setUserDetails({
-          fullName: profile.fullName || user?.displayName || "",
-          phone: profile.phone || "",
-          address: profile.address || "",
-          aadharNo: profile.aadharNo || "",
-        });
+
+        if (savedDraft) {
+          const draft = JSON.parse(savedDraft);
+          setUserDetails(draft);
+          // Re-validate phone if loaded from draft
+          if (draft.phone) validatePhone(draft.phone);
+        } else {
+          setUserDetails({
+            fullName: profile.fullName || user?.displayName || "",
+            phone: profile.phone || "",
+            address: profile.address || "",
+            aadharNo: profile.aadharNo || "",
+          });
+          if (profile.phone) validatePhone(profile.phone);
+        }
       } catch (err) {
         console.error("Error:", err);
         setError("Could not access mission data.");
@@ -76,39 +102,57 @@ const Booking = () => {
     if (user) loadData();
   }, [id, user]);
 
-  // 2. CALCULATIONS
-  const pricePerPerson = trip?.price || 0;
-  const taxes = pricePerPerson * guests * 0.05; // 5% Tax simulation
-  const totalAmount = pricePerPerson * guests + taxes;
-
-  // 3. HANDLERS
-  const handleUserChange = (e) => {
-    setUserDetails({ ...userDetails, [e.target.name]: e.target.value });
+  // 2. REAL-TIME SAVE & VALIDATION HELPERS
+  const validatePhone = (number) => {
+    const phoneRegex = /^[6-9]\d{9}$/; // Basic Indian Mobile Number Validation
+    setIsPhoneValid(phoneRegex.test(number));
   };
 
+  const handleUserChange = (e) => {
+    const { name, value } = e.target;
+    const updatedDetails = { ...userDetails, [name]: value };
+
+    // Update State
+    setUserDetails(updatedDetails);
+
+    // Save to LocalStorage (Persistence)
+    localStorage.setItem("bookingDraft", JSON.stringify(updatedDetails));
+
+    // Real-time Validation for Phone
+    if (name === "phone") {
+      validatePhone(value);
+    }
+  };
+
+  // 3. CALCULATIONS
+  const pricePerPerson = trip?.price || 0;
+  const taxes = pricePerPerson * guests * 0.03;
+  const totalAmount = pricePerPerson * guests + taxes;
+
+  // 4. SUBMIT HANDLERS
   const handleInitialSubmit = (e) => {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!bookingDate) return setError("Please select a mission date.");
-    if (!userDetails.phone)
-      return setError("Contact frequency (Phone) is required.");
+    if (!isPhoneValid)
+      return setError("A valid contact frequency (Phone) is required.");
 
-    // Decision: Open Modal OR Submit Directly
+    // Clear draft on successful submit attempt start
+    // localStorage.removeItem("bookingDraft"); // Optional: clear here or after success
+
     if (paymentMethod === "pay_on_arrival") {
       finalizeBooking();
     } else {
-      setShowPaymentModal(true); // Open the overlay
+      setShowPaymentModal(true);
     }
   };
 
   const finalizeBooking = async () => {
     setSubmitting(true);
-    setPaymentProcessing(true); // Visual feedback inside modal
+    setPaymentProcessing(true);
 
     try {
-      // Simulate network delay for "Processing Payment" feeling
       if (paymentMethod !== "pay_on_arrival") {
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
@@ -131,12 +175,13 @@ const Booking = () => {
 
       const res = await api.post("/bookings/book", payload);
 
-      // Success!
+      // Clear draft after success
+      localStorage.removeItem("bookingDraft");
+
       setShowPaymentModal(false);
       navigate("/success", {
         state: { booking: { id: res.data.bookingId || id } },
       });
-      // You could navigate to a /success page if you build one
     } catch (err) {
       console.error("Booking failed:", err);
       setError(err.response?.data?.message || "Booking transmission failed.");
@@ -144,6 +189,14 @@ const Booking = () => {
       setPaymentProcessing(false);
     }
   };
+
+  // --- WHATSAPP LINK GENERATOR ---
+  // --- WHATSAPP LINK GENERATOR (FIXED) ---
+  const whatsappUrl = trip
+    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+        `Hi ${COMPANY_NAME}, I'm interested in the '${trip.title}' expedition for ${guests} people. Can you help me with some details before I book?`,
+      )}`
+    : "#";
 
   if (loading)
     return (
@@ -161,14 +214,14 @@ const Booking = () => {
             <h1 className="text-3xl font-header text-white uppercase mb-2">
               Confirm Expedition
             </h1>
-            <p className="text-gray-400">Secure your spot for {trip.title}.</p>
+            <p className="text-gray-400">Secure your seat for {trip.title}.</p>
           </div>
 
           <form onSubmit={handleInitialSubmit} className="space-y-8">
             {/* 1. MISSION DETAILS */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
-                <Calendar className="text-primary" size={20} /> Mission Timeline
+                <Calendar className="text-primary" size={20} /> Tour Timeline
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -186,7 +239,7 @@ const Booking = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                    Team Size
+                    Number of Explorers
                   </label>
                   <div className="relative">
                     <Users
@@ -207,7 +260,7 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* 2. EXPLORER DATA */}
+            {/* 2. EXPLORER DATA (With Validation) */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <ShieldCheck className="text-primary" size={20} /> Explorer Data
@@ -226,19 +279,47 @@ const Booking = () => {
                     onChange={handleUserChange}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                    Phone Frequency
+
+                {/* B. REAL-TIME VALIDATION FIELD */}
+                <div className="space-y-2 relative">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500 flex justify-between">
+                    Phone Number
+                    {isPhoneValid === true && (
+                      <span className="text-green-500 text-[10px] flex items-center gap-1">
+                        <Check size={10} /> Valid
+                      </span>
+                    )}
+                    {isPhoneValid === false && (
+                      <span className="text-red-500 text-[10px] flex items-center gap-1">
+                        <AlertCircle size={10} /> Invalid Format
+                      </span>
+                    )}
                   </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    required
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-white focus:border-primary outline-none"
-                    value={userDetails.phone}
-                    onChange={handleUserChange}
-                  />
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="phone"
+                      required
+                      className={`w-full bg-black/20 border rounded-xl p-4 text-white focus:outline-none transition-colors ${
+                        isPhoneValid === false
+                          ? "border-red-500/50 focus:border-red-500"
+                          : isPhoneValid === true
+                            ? "border-green-500/50 focus:border-green-500"
+                            : "border-white/10 focus:border-primary"
+                      }`}
+                      placeholder="10-digit Mobile Number"
+                      value={userDetails.phone}
+                      onChange={handleUserChange}
+                    />
+                    {isPhoneValid === true && (
+                      <CheckCircle
+                        className="absolute right-4 top-4 text-green-500"
+                        size={20}
+                      />
+                    )}
+                  </div>
                 </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Address
@@ -258,10 +339,9 @@ const Booking = () => {
             {/* 3. PAYMENT SELECTION */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
-                <Wallet className="text-primary" size={20} /> Funding Source
+                <Wallet className="text-primary" size={20} /> Payment Method
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* UPI */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "upi" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -282,7 +362,6 @@ const Booking = () => {
                   <span className="font-bold text-sm">UPI / QR</span>
                 </label>
 
-                {/* Card */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "card" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -305,7 +384,6 @@ const Booking = () => {
                   <span className="font-bold text-sm">Credit Card</span>
                 </label>
 
-                {/* Pay Later */}
                 <label
                   className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "pay_on_arrival" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
@@ -325,9 +403,34 @@ const Booking = () => {
                     }
                     size={28}
                   />
-                  <span className="font-bold text-sm">Pay at Base</span>
+                  <span className="font-bold text-sm">Pay at Office</span>
                 </label>
               </div>
+            </div>
+
+            {/* WHATSAPP TRUST BUILDER */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-500 p-2 rounded-full text-black">
+                  <MessageCircle size={20} />
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-sm">
+                    Have doubts about this Tour?
+                  </h4>
+                  <p className="text-gray-400 text-xs">
+                    Chat with Menagement Team directly before booking.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors"
+              >
+                Chat on WhatsApp
+              </a>
             </div>
 
             {error && (
@@ -350,16 +453,20 @@ const Booking = () => {
 
         {/* --- RIGHT: ORDER SUMMARY (Sticky) --- */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 bg-[#1c1917] p-6 rounded-3xl border border-white/10">
+          <div className="sticky top-24 bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-2xl">
+            {/* C. FOMO BADGE */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg flex items-center gap-1 animate-pulse">
+              <Eye size={12} /> {viewers} Others Viewing
+            </div>
+
             <h3 className="text-xl font-header text-white mb-6">
               Manifest Summary
             </h3>
 
             <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
-                {/* Reusing existing logic for image would go here, simplified for brevity */}
                 <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-                  Trip Image
+                  IMG
                 </div>
               </div>
               <div>
@@ -380,12 +487,14 @@ const Booking = () => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Taxes & Permits (5%)</span>
+                <span>Taxes & Permits (3%)</span>
                 <span className="text-white">₹{taxes.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Platform Fee</span>
-                <span className="text-primary">Waived</span>
+                <span className="text-primary font-bold uppercase text-xs">
+                  Waived
+                </span>
               </div>
             </div>
 
@@ -450,9 +559,8 @@ const Booking = () => {
               </div>
             ) : paymentMethod === "upi" ? (
               <div className="text-center space-y-6">
-                [Image of QR code for UPI payment]
+                {/* WhatsApp Pre-check could also be here if desired */}
                 <div className="bg-white p-4 rounded-xl inline-block">
-                  {/* Placeholder QR */}
                   <QrCode size={150} className="text-black" />
                 </div>
                 <p className="text-sm text-gray-400">
@@ -523,6 +631,6 @@ const Booking = () => {
       )}
     </div>
   );
-};
+};;
 
 export default Booking;

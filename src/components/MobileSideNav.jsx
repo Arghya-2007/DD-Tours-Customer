@@ -7,7 +7,8 @@ const MobileNav = () => {
   const items = [
     { name: "Home", icon: <Home size={20} />, path: "/" },
     { name: "Tours", icon: <Map size={20} />, path: "/tours" },
-    { name: "Blog", icon: <BookOpen size={20} />, path: "/blogs" },
+    { name: "Blogs", icon: <BookOpen size={20} />, path: "/blogs" },
+    { name: "About Us", icon: <BookOpen size={20} />, path: "/about" },
     { name: "Profile", icon: <User size={20} />, path: "/profile" },
   ];
 

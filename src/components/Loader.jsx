@@ -15,7 +15,7 @@ const Loader = () => {
 
       {/* Loading Text */}
       <p className="text-gray-400 font-header tracking-widest uppercase text-sm animate-pulse">
-        Locating Basecamp...
+        Locating DD Tours...
       </p>
     </div>
   );

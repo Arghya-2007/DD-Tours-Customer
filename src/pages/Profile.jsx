@@ -17,6 +17,7 @@ import {
   Clock,
   FileText,
   X,
+  Loader2,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -27,6 +28,7 @@ const Profile = () => {
   const [bookings, setBookings] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const container = useRef();
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -102,7 +104,9 @@ const Profile = () => {
   // --- 3. UPDATE HANDLER ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const loadingToast = toast.loading("Updating personnel file...");
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 800)); // Small delay for UX
+    const loadingToast = toast.loading("Encrypting & Uploading...");
     try {
       const res = await api.put("/users/profile", formData);
       setProfileData(res.data);
@@ -112,6 +116,7 @@ const Profile = () => {
       console.error(error);
       toast.error("Update Failed", { id: loadingToast });
     }
+    setIsSaving(false);
   };
 
   // --- 4. IMAGE HELPERS ---
@@ -199,10 +204,12 @@ const Profile = () => {
                   ) : (
                     <AlertTriangle size={14} />
                   )}
-                  {isProfileComplete ? "Clearance Granted" : "Incomplete Data"}
+                  {isProfileComplete
+                    ? "Account Verified"
+                    : "Incomplete Profile"}
                 </span>
                 <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300">
-                  <Compass size={14} /> {bookings.length} Missions Logged
+                  <Compass size={14} /> {bookings.length} Tours Logged
                 </span>
               </div>
             </div>
@@ -231,7 +238,7 @@ const Profile = () => {
             {/* Contact Intel */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-lg">
               <h3 className="text-xl font-header text-white mb-6 flex items-center gap-3">
-                <User size={20} className="text-primary" /> Operative Data
+                <User size={20} className="text-primary" /> Contact Intel
               </h3>
               <div className="space-y-4">
                 <DetailRow
@@ -256,7 +263,7 @@ const Profile = () => {
             {/* Clearance Docs */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-lg">
               <h3 className="text-xl font-header text-white mb-6 flex items-center gap-3">
-                <Shield size={20} className="text-primary" /> Clearance Docs
+                <Shield size={20} className="text-primary" /> Primary Docs
               </h3>
               <div className="space-y-4">
                 <DetailRow
@@ -280,7 +287,7 @@ const Profile = () => {
           {/* --- RIGHT COL: MISSION LOG --- */}
           <div className="dashboard-col lg:col-span-2">
             <h3 className="text-2xl font-header text-white mb-6 flex items-center gap-3">
-              <Compass size={24} className="text-primary" /> Mission Log
+              <Compass size={24} className="text-primary" /> Trips Logged
             </h3>
 
             {bookings.length === 0 ? (
@@ -292,14 +299,14 @@ const Profile = () => {
                   No Expeditions Found
                 </h4>
                 <p className="text-gray-500 mb-8 max-w-md mx-auto">
-                  Your mission log is empty. Check available expeditions and
-                  start your journey.
+                  Your trip log is empty. Check available expeditions and start
+                  your journey.
                 </p>
                 <a
                   href="/tours"
                   className="inline-block bg-primary text-white px-8 py-3 rounded-full font-bold hover:bg-orange-600 transition-colors"
                 >
-                  Find a Mission
+                  Find a Tour
                 </a>
               </div>
             ) : (
@@ -359,106 +366,141 @@ const Profile = () => {
 
       {/* --- EDIT MODAL (Tactical Overlay) --- */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
+          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsEditing(false)}
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            onClick={() => !isSaving && setIsEditing(false)} // Prevent closing while saving
           />
 
-          <div className="relative bg-[#1c1917] w-full max-w-2xl rounded-3xl p-8 border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-              <h2 className="text-2xl font-header text-white uppercase">
+          {/* Modal Container */}
+          <div className="relative bg-[#1c1917] w-full h-full sm:h-auto sm:max-w-2xl sm:rounded-3xl border-x border-white/10 sm:border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Fixed Header */}
+            <div className="flex justify-between items-center p-6 border-b border-white/10 bg-[#1c1917] z-10">
+              <h2 className="text-xl sm:text-2xl font-header text-white uppercase tracking-tight">
                 Update Personnel File
               </h2>
               <button
-                onClick={() => setIsEditing(false)}
-                className="text-gray-500 hover:text-white"
+                onClick={() => !isSaving && setIsEditing(false)}
+                className={`p-2 -mr-2 text-gray-500 hover:text-white transition-colors ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={isSaving}
               >
                 <X size={24} />
               </button>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
-            >
-              <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4">
-                <img
-                  src={getProfileImage()}
-                  onError={handleImageError}
-                  referrerPolicy="no-referrer"
-                  className="w-12 h-12 rounded-full opacity-80"
-                  alt=""
-                />
-                <div>
-                  <p className="text-[10px] text-primary font-bold uppercase tracking-widest">
-                    Google Identity
-                  </p>
-                  <p className="font-bold text-white">{user?.displayName}</p>
-                  <p className="text-sm text-gray-400">{user?.email}</p>
+            {/* Scrollable Form Area */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
+                {/* Identity Card */}
+                <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
+                  <img
+                    src={getProfileImage()}
+                    onError={handleImageError}
+                    referrerPolicy="no-referrer"
+                    className="w-12 h-12 rounded-full border-2 border-primary/20"
+                    alt="Profile"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest truncate">
+                      Verified Google ID
+                    </p>
+                    <p className="font-bold text-white truncate">
+                      {user?.displayName}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {user?.email}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <Input
-                label="Comms (Phone)"
-                type="tel"
-                value={formData.phone}
-                placeholder="+91"
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-              <Input
-                label="Date of Birth"
-                type="date"
-                value={formData.dob}
-                onChange={(e) =>
-                  setFormData({ ...formData, dob: e.target.value })
-                }
-              />
-              <div className="md:col-span-2">
                 <Input
-                  label="Base Address"
-                  value={formData.address}
-                  placeholder="Full Address"
+                  label="Comms (Phone)"
+                  type="tel"
+                  value={formData.phone}
+                  placeholder="+91 XXXXX XXXXX"
+                  disabled={isSaving}
                   onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
+                    setFormData({ ...formData, phone: e.target.value })
                   }
                 />
-              </div>
-              <Input
-                label="Aadhar UID"
-                value={formData.aadharNo}
-                placeholder="12 Digit UID"
-                onChange={(e) =>
-                  setFormData({ ...formData, aadharNo: e.target.value })
-                }
-              />
-              <Input
-                label="PAN Number"
-                value={formData.panNo}
-                placeholder="ABCDE1234F"
-                onChange={(e) =>
-                  setFormData({ ...formData, panNo: e.target.value })
-                }
-              />
 
-              <div className="md:col-span-2 flex justify-end gap-3 pt-6 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-6 py-3 text-gray-400 hover:text-white font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-900/20 transition-all"
-                >
-                  Save Data
-                </button>
-              </div>
-            </form>
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={formData.dob}
+                  disabled={isSaving}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dob: e.target.value })
+                  }
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    label="Base Address"
+                    value={formData.address}
+                    placeholder="Full Street Address"
+                    disabled={isSaving}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                  />
+                </div>
+
+                <Input
+                  label="Aadhar UID"
+                  value={formData.aadharNo}
+                  placeholder="12 Digit UID"
+                  disabled={isSaving}
+                  onChange={(e) =>
+                    setFormData({ ...formData, aadharNo: e.target.value })
+                  }
+                />
+
+                <Input
+                  label="PAN Number"
+                  value={formData.panNo}
+                  placeholder="ABCDE1234F"
+                  disabled={isSaving}
+                  onChange={(e) =>
+                    setFormData({ ...formData, panNo: e.target.value })
+                  }
+                />
+              </form>
+            </div>
+
+            {/* Fixed Footer with Animated Button */}
+            <div className="p-6 border-t border-white/10 bg-[#1c1917] flex gap-3 z-10">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                disabled={isSaving}
+                className="flex-1 sm:flex-none px-6 py-3 text-gray-400 hover:text-white font-bold transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleSubmit}
+                type="submit"
+                disabled={isSaving}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-wider 
+            ${
+              isSaving
+                ? "opacity-80 cursor-wait"
+                : "hover:bg-orange-600 shadow-lg shadow-orange-900/20"
+            }`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  "Save Data"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

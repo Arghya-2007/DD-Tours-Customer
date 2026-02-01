@@ -3,10 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Home, Map, BookOpen, Info, User, LogOut, Compass } from "lucide-react";
+import { auth } from "../firebase";
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
   const location = useLocation();
   const containerRef = useRef(null);
+  const logout = useAuth().logout;
 
   useGSAP(
     () => {
@@ -41,7 +44,7 @@ const Sidebar = () => {
         <div className="flex items-center gap-3 text-primary mb-1">
           <Compass size={36} strokeWidth={2} />
           <h1 className="text-3xl font-header tracking-wide text-white uppercase">
-            DD Tours
+            DD Tours & Travel
           </h1>
         </div>
       </div>
@@ -78,7 +81,7 @@ const Sidebar = () => {
       </nav>
 
       {/* Footer - High Contrast */}
-      <div className="p-6 border-t border-white/10">
+      <div onClick={() => logout()} className="p-6 border-t border-white/10">
         <button className="nav-item flex items-center gap-3 px-4 py-3 w-full text-left text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
           <LogOut size={20} />
           <span className="font-bold text-sm">Disconnect</span>

@@ -187,7 +187,7 @@ const Home = () => {
       <div className="py-32 px-6 max-w-7xl mx-auto">
         <div className="text-center mb-20">
           <h4 className="text-primary uppercase tracking-widest font-bold mb-3">
-            The DD Standard
+            The DD Tours Standard
           </h4>
           <h2 className="text-5xl font-header">Why We Are Different</h2>
         </div>
@@ -252,7 +252,7 @@ const Home = () => {
                 Small Groups, Big Impact
               </h3>
               <p className="text-gray-400 text-lg">
-                We cap our groups at 8 explorers to ensure an intimate,
+                We cap our groups at 15 - 25 explorers to ensure an intimate,
                 immersive experience. No megaphones, no crowds.
               </p>
             </div>
