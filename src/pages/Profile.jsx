@@ -19,6 +19,8 @@ import {
   X,
   Loader2,
   CreditCard,
+  Wallet,
+  Smartphone, // For UPI Icon
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -31,7 +33,6 @@ const Profile = () => {
   const container = useRef();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     phone: "",
     address: "",
@@ -40,20 +41,36 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. DATA NORMALIZER (THE FIX) ---
-  // This converts messy DB data into a clean, standard format for the UI
+  // --- 1. BULLETPROOF DATA NORMALIZER ---
   const normalizeBooking = (b) => {
+    // Extract nested details safely
+    const details = b.userDetails || {};
+
+    // Check ALL possible payment indicators
+    const methodRoot = (b.paymentMethod || "").toLowerCase();
+    const methodNested = (details.paymentMethod || "").toLowerCase();
+    const gateway = (b.gateway || "").toLowerCase();
+    const paymentId = b.paymentId;
+
+    // Strict Logic: It is ONLINE if any of these are true
+    const isOnline =
+      methodRoot === "online" ||
+      methodRoot === "upi" ||
+      methodRoot === "card" ||
+      methodNested === "online" ||
+      methodNested === "upi" ||
+      methodNested === "card" ||
+      gateway === "razorpay" ||
+      (paymentId && paymentId.startsWith("pay_"));
+
     return {
       id: b.id || b._id,
-      // Handle both naming conventions
       title: b.tripTitle || "Unknown Expedition",
       date: b.bookingDate || b.tripDate || b.createdAt,
       price: b.totalAmount || b.totalPrice || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
-      // Determine if it was paid online
-      isOnline:
-        b.paymentMethod === "online" || b.gateway === "razorpay" || b.paymentId,
+      isOnline: isOnline, // <--- This will now be correct
       raw: b,
     };
   };
@@ -80,14 +97,11 @@ const Profile = () => {
         bookingsRes.status === "fulfilled" &&
         Array.isArray(bookingsRes.value.data)
       ) {
-        // 1. Normalize Data
+        // Normalize & Sort
         const cleanBookings = bookingsRes.value.data.map(normalizeBooking);
-
-        // 2. Sort: Newest First
         const sorted = cleanBookings.sort(
           (a, b) => new Date(b.date) - new Date(a.date),
         );
-
         setBookings(sorted);
       }
     } catch (err) {
@@ -102,7 +116,6 @@ const Profile = () => {
   useGSAP(() => {
     if (!loading && profileData) {
       const tl = gsap.timeline();
-
       tl.fromTo(
         ".profile-header",
         { y: -50, opacity: 0 },
@@ -141,18 +154,12 @@ const Profile = () => {
     setIsSaving(false);
   };
 
-  // --- 5. IMAGE HELPERS ---
-  const getProfileImage = () => {
-    return (
-      user?.photoURL ||
-      `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`
-    );
-  };
-
-  const handleImageError = (e) => {
-    e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
-  };
-
+  // --- 5. HELPERS ---
+  const getProfileImage = () =>
+    user?.photoURL ||
+    `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
+  const handleImageError = (e) =>
+    (e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`);
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
 
   if (loading)
@@ -181,7 +188,6 @@ const Profile = () => {
         {/* --- HEADER --- */}
         <div className="profile-header relative bg-[#1c1917] rounded-3xl p-8 border border-white/10 overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-orange-600 rounded-full blur opacity-50 group-hover:opacity-100 transition duration-500"></div>
@@ -198,7 +204,6 @@ const Profile = () => {
                 </div>
               )}
             </div>
-
             <div className="flex-1 text-center md:text-left space-y-2">
               <div>
                 <h1 className="text-4xl font-header text-white uppercase tracking-wide">
@@ -208,7 +213,6 @@ const Profile = () => {
                   ID: {user?.uid?.slice(0, 8) || "UNREGISTERED"}
                 </p>
               </div>
-
               <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-4">
                 <span
                   className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${isProfileComplete ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
@@ -227,7 +231,6 @@ const Profile = () => {
                 </span>
               </div>
             </div>
-
             <div className="flex gap-4">
               <button
                 onClick={() => setIsEditing(true)}
@@ -271,7 +274,6 @@ const Profile = () => {
                 <DetailRow icon={FileText} label="Email" value={user?.email} />
               </div>
             </div>
-
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-lg">
               <h3 className="text-xl font-header text-white mb-6 flex items-center gap-3">
                 <Shield size={20} className="text-primary" /> Primary Docs
@@ -300,7 +302,6 @@ const Profile = () => {
             <h3 className="text-2xl font-header text-white mb-6 flex items-center gap-3">
               <Compass size={24} className="text-primary" /> Trips Logged
             </h3>
-
             {bookings.length === 0 ? (
               <div className="bg-[#1c1917] p-12 rounded-3xl border border-dashed border-white/10 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -332,12 +333,15 @@ const Profile = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                      {/* Trip Info */}
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                           <StatusBadge status={booking.status} />
+
+                          {/* DYNAMIC PAYMENT BADGE */}
                           {booking.isOnline ? (
                             <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded">
-                              <CreditCard size={10} /> Online
+                              <Smartphone size={10} /> Online
                             </span>
                           ) : (
                             <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded">
@@ -346,14 +350,12 @@ const Profile = () => {
                           )}
                         </div>
 
-                        {/* Title using Normalized Data */}
                         <h4 className="text-2xl font-header text-white group-hover:text-primary transition-colors">
                           {booking.title}
                         </h4>
-
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
                           <span className="flex items-center gap-1.5">
-                            <Calendar size={14} className="text-primary" />
+                            <Calendar size={14} className="text-primary" />{" "}
                             {new Date(booking.date).toLocaleDateString(
                               "en-IN",
                               {
@@ -370,25 +372,26 @@ const Profile = () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-row md:flex-col justify-between items-end text-right border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px]">
-                        <div>
+                      {/* Price & Action: STACKED FOR MOBILE */}
+                      <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[140px] gap-4">
+                        <div className="text-left md:text-right w-full">
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
                             Total Cost
                           </p>
-                          {/* Price using Normalized Data */}
                           <p className="text-2xl font-header text-white">
                             ₹{Number(booking.price).toLocaleString()}
                           </p>
+
                           <p
                             className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${booking.isOnline ? "text-green-500" : "text-yellow-500"}`}
                           >
                             {booking.isOnline
-                              ? "Payment Complete"
-                              : "Payment Pending"}
+                              ? "PAID ONLINE"
+                              : "PAYMENT PENDING"}
                           </p>
                         </div>
                         {booking.status === "confirmed" && (
-                          <button className="mt-3 text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg text-gray-300 transition-colors border border-white/5">
+                          <button className="text-xs flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto justify-center">
                             <FileText size={12} /> Download Pass
                           </button>
                         )}
@@ -422,7 +425,6 @@ const Profile = () => {
                 <X size={24} />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
                 <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
@@ -495,7 +497,6 @@ const Profile = () => {
                 />
               </form>
             </div>
-
             <div className="p-6 border-t border-white/10 bg-[#1c1917] flex gap-3 z-10">
               <button
                 type="button"
@@ -527,7 +528,6 @@ const Profile = () => {
   );
 };
 
-// --- SUB COMPONENTS ---
 const DetailRow = ({ icon: Icon, label, value, isSecure }) => (
   <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
     <div className="flex items-center gap-3">
