@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { generateTicket } from "../utils/generateTicket";
 import api from "../services/api";
+import RatingModal from "../components/RatingModal";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -39,6 +40,12 @@ const Profile = () => {
     dob: "",
     aadharNo: "",
     panNo: "",
+  });
+
+  const [ratingModal, setRatingModal] = useState({
+    show: false,
+    tripId: null,
+    tripTitle: "",
   });
 
   // --- 1. DATA NORMALIZER ---
@@ -423,12 +430,31 @@ const Profile = () => {
                               </span>
                               <button
                                 onClick={() =>
-                                  toast("Rating System Coming Soon!")
+                                  setRatingModal({
+                                    show: true,
+                                    tripId: booking.id,
+                                    tripTitle: booking.title,
+                                  })
                                 }
                                 className="text-xs flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 px-4 py-3 rounded-lg border border-yellow-500/20 transition-all w-full"
                               >
                                 <Star size={14} fill="currentColor" /> Rate Tour
                               </button>
+                              <RatingModal
+                                isOpen={ratingModal.show}
+                                onClose={() =>
+                                  setRatingModal({
+                                    ...ratingModal,
+                                    show: false,
+                                  })
+                                }
+                                tripId={ratingModal.tripId}
+                                tripTitle={ratingModal.tripTitle}
+                                onSuccess={() => {
+                                  toast.success("Thank you for your feedback!");
+                                  fetchUserData();
+                                }}
+                              />
                             </div>
                           ) : (
                             /* 2. If Trip is NOT Completed (Show Ticket if Confirmed) */
