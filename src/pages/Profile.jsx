@@ -83,6 +83,7 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
+      tripId: b.tripId || liveTrip._id || b.trip?._id,
       title: liveTrip.title || b.tripTitle || "Unknown Expedition",
       displayDate: dateStr,
       isDateFixed: isDateFixed,
@@ -432,7 +433,7 @@ const Profile = () => {
                                 onClick={() =>
                                   setRatingModal({
                                     show: true,
-                                    tripId: booking.id,
+                                    tripId: booking.tripId,
                                     tripTitle: booking.title,
                                   })
                                 }
