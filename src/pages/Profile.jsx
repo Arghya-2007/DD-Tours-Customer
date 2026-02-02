@@ -63,15 +63,15 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
-      title: b.tripTitle || "Unknown Expedition",
+      title: b.tripTitle || b.title || "Unknown Expedition",
       // Fallback for dates
       date: b.bookingDate || b.tripDate || b.createdAt,
       // Fallback for price (Offline vs Online fields)
-      price: b.totalAmount || b.totalPrice || 0,
+      price: b.totalAmount || b.totalPrice || b.amount || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
       isOnline: isOnline,
-      raw: b,
+      raw: b, // Keep raw data for the Ticket Generator
     };
   };
 
@@ -140,7 +140,8 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 800)); // UX Pause
+
     const loadingToast = toast.loading("Encrypting & Uploading...");
     try {
       const res = await api.put("/users/profile", formData);
@@ -157,8 +158,10 @@ const Profile = () => {
   const getProfileImage = () =>
     user?.photoURL ||
     `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
+
   const handleImageError = (e) =>
     (e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`);
+
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
 
   if (loading)
@@ -176,7 +179,7 @@ const Profile = () => {
   return (
     <div
       ref={container}
-      className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 pb-20 overflow-hidden"
+      className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 pb-20 overflow-hidden font-sans"
     >
       <Toaster
         position="bottom-right"
@@ -331,7 +334,7 @@ const Profile = () => {
                       #{booking.id.slice(0, 6)}
                     </div>
 
-                    {/* --- THE FIX: Changed to 'flex-col' for mobile by default --- */}
+                    {/* --- RESPONSIVE LAYOUT FIX: flex-col on mobile, row on desktop --- */}
                     <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                       {/* Trip Info */}
                       <div className="space-y-3">
@@ -351,6 +354,7 @@ const Profile = () => {
                         <h4 className="text-2xl font-header text-white group-hover:text-primary transition-colors">
                           {booking.title}
                         </h4>
+
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
                           <span className="flex items-center gap-1.5">
                             <Calendar size={14} className="text-primary" />{" "}
@@ -370,8 +374,7 @@ const Profile = () => {
                         </div>
                       </div>
 
-                      {/* --- THE FIX: Price & Action --- */}
-                      {/* 'flex-col' ensures vertical stacking on mobile. 'md:items-end' aligns right on desktop */}
+                      {/* Price & Action - Aligned Right on Desktop, Stacked on Mobile */}
                       <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[160px] gap-4">
                         <div className="text-left md:text-right w-full">
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
@@ -391,10 +394,9 @@ const Profile = () => {
 
                         {booking.status === "confirmed" && (
                           <button
-                            onClick={() => {
-                              generateTicket(booking);
-                            }}
-                            className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto">
+                            onClick={() => generateTicket(booking)}
+                            className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto"
+                          >
                             <FileText size={12} /> Download Pass
                           </button>
                         )}
@@ -430,6 +432,7 @@ const Profile = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
+                {/* Read-Only Profile Card */}
                 <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
                   <img
                     src={getProfileImage()}
@@ -450,6 +453,8 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Inputs */}
                 <Input
                   label="Comms (Phone)"
                   type="tel"
@@ -531,6 +536,7 @@ const Profile = () => {
   );
 };
 
+// --- Sub-Components ---
 const DetailRow = ({ icon: Icon, label, value, isSecure }) => (
   <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
     <div className="flex items-center gap-3">
@@ -556,7 +562,7 @@ const Input = ({ label, ...props }) => (
     </label>
     <input
       {...props}
-      className="bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-primary focus:outline-none focus:bg-white/5 transition-all placeholder-gray-600"
+      className="bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-primary focus:outline-none focus:bg-white/5 transition-all placeholder-gray-600 disabled:opacity-50"
     />
   </div>
 );

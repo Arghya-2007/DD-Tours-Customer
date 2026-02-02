@@ -12,11 +12,12 @@ import {
   ShieldCheck,
   CheckCircle,
   AlertCircle,
-  X,
+  AlertTriangle,
   Lock,
   MessageCircle,
   Check,
   Eye,
+  Clock,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
@@ -79,8 +80,16 @@ const Booking = () => {
 
         const tripData = tripRes.data.trip || tripRes.data;
         setTrip(tripData);
-        if (tripData.expectedDate)
+
+        // --- SMART DATE LOGIC ---
+        // 1. If Fixed Date exists, LOCK IT.
+        if (tripData.fixedDate) {
+          setBookingDate(tripData.fixedDate);
+        }
+        // 2. If legacy expectedDate exists, pre-fill it but allow change
+        else if (tripData.expectedDate) {
           setBookingDate(tripData.expectedDate.split("T")[0]);
+        }
 
         // Persistence Logic
         const savedDraft = localStorage.getItem("bookingDraft");
@@ -144,8 +153,6 @@ const Booking = () => {
     if (paymentMethod === "pay_on_arrival") {
       finalizeBooking(); // Direct API Call
     } else {
-      // For Online Payment, we open the modal which shows "Processing"
-      // and immediately triggers Razorpay
       setShowPaymentModal(true);
       finalizeBooking();
     }
@@ -159,7 +166,7 @@ const Booking = () => {
       try {
         const payload = {
           tripId: trip._id || trip.id,
-          userId: user.uid, // Ensure ID is sent here too
+          userId: user.uid,
           seats: parseInt(guests),
           tripTitle: trip.title,
           bookingDate,
@@ -182,7 +189,7 @@ const Booking = () => {
     }
 
     // --- SCENARIO 2: ONLINE PAYMENT (Razorpay) ---
-    setPaymentProcessing(true); // Shows the spinner in our React Modal
+    setPaymentProcessing(true);
 
     try {
       const isLoaded = await loadRazorpayScript();
@@ -201,7 +208,7 @@ const Booking = () => {
         currency: orderData.currency,
         name: "DD Tours",
         description: `Expedition: ${trip.title}`,
-        image: "https://your-logo-url.com/logo.png", // Replace with your URL
+        image: "https://your-logo-url.com/logo.png",
         order_id: orderData.id,
         handler: async function (response) {
           try {
@@ -209,11 +216,9 @@ const Booking = () => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-
-              // 👇 THE CRITICAL FIX: Adding User Identity to Online Payment
               bookingDetails: {
                 tripId: trip._id || trip.id,
-                userId: user.uid, // <--- THIS WAS MISSING
+                userId: user.uid,
                 userEmail: user.email,
                 seats: parseInt(guests),
                 tripTitle: trip.title,
@@ -254,7 +259,7 @@ const Booking = () => {
           ondismiss: function () {
             setPaymentProcessing(false);
             setSubmitting(false);
-            setShowPaymentModal(false); // Close our modal if they close Razorpay
+            setShowPaymentModal(false);
           },
         },
       };
@@ -270,7 +275,6 @@ const Booking = () => {
     }
   };
 
-  // --- WHATSAPP LINK ---
   const whatsappUrl = trip
     ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
         `Hi ${COMPANY_NAME}, I'm interested in the '${trip.title}' expedition for ${guests} people. Can you help me with some details before I book?`,
@@ -285,7 +289,7 @@ const Booking = () => {
     );
 
   return (
-    <div className="min-h-screen bg-[#0c0a09] text-gray-200 py-12 px-6">
+    <div className="min-h-screen bg-[#0c0a09] text-gray-200 py-12 px-6 font-sans">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
         {/* --- LEFT: BOOKING FORM --- */}
         <div className="lg:col-span-2 space-y-8">
@@ -293,29 +297,73 @@ const Booking = () => {
             <h1 className="text-3xl font-header text-white uppercase mb-2">
               Confirm Expedition
             </h1>
-            <p className="text-gray-400">Secure your seat for {trip.title}.</p>
+            <p className="text-gray-400">
+              Secure your seat for{" "}
+              <span className="text-primary font-bold">{trip.title}</span>.
+            </p>
           </div>
 
           <form onSubmit={handleInitialSubmit} className="space-y-8">
             {/* 1. MISSION DETAILS */}
-            <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
+            <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5 relative overflow-hidden">
+              {/* Fixed Date Watermark/Banner */}
+              {trip.fixedDate && (
+                <div className="absolute top-0 right-0 bg-emerald-500/10 border-l border-b border-emerald-500/20 px-4 py-2 rounded-bl-2xl">
+                  <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Lock size={12} /> Fixed Schedule
+                  </span>
+                </div>
+              )}
+
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <Calendar className="text-primary" size={20} /> Tour Timeline
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* DATE PICKER (Smart) */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                    Date
+                    Launch Date
                   </label>
-                  <input
-                    type="date"
-                    required
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-white focus:border-primary focus:outline-none transition-colors"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      disabled={!!trip.fixedDate} // DISABLE if Fixed
+                      className={`w-full border rounded-xl p-4 text-white focus:outline-none transition-colors 
+                           ${
+                             trip.fixedDate
+                               ? "bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-not-allowed"
+                               : "bg-black/20 border-white/10 focus:border-primary"
+                           }
+                        `}
+                      value={bookingDate}
+                      onChange={(e) => setBookingDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    {trip.fixedDate && (
+                      <Lock
+                        size={16}
+                        className="absolute right-4 top-4 text-emerald-500"
+                      />
+                    )}
+                  </div>
+                  {/* Helper Text for Dates */}
+                  {trip.fixedDate ? (
+                    <p className="text-[10px] text-emerald-500/80 mt-1">
+                      * This expedition has a fixed launch schedule.
+                    </p>
+                  ) : trip.expectedMonth ? (
+                    <p className="text-[10px] text-purple-400 mt-1">
+                      * Expected launch in {trip.expectedMonth}. Please select a
+                      date within this range.
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      * Flexible dates available.
+                    </p>
+                  )}
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Number of Explorers
@@ -497,10 +545,10 @@ const Booking = () => {
                 </div>
                 <div>
                   <h4 className="text-white font-bold text-sm">
-                    Have doubts about this Tour?
+                    Need help with booking?
                   </h4>
                   <p className="text-gray-400 text-xs">
-                    Chat with Management Team directly before booking.
+                    Chat directly with the operations team.
                   </p>
                 </div>
               </div>
@@ -543,13 +591,29 @@ const Booking = () => {
             <h3 className="text-xl font-header text-white mb-6">
               Manifest Summary
             </h3>
-            {/* ... Summary Content ... */}
+
+            {/* URGENCY ALERT (New Field) */}
+            {trip.bookingEndsIn && (
+              <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center gap-2">
+                <AlertTriangle size={16} className="text-red-400" />
+                <span className="text-red-300 text-xs font-bold">
+                  Booking closes: {trip.bookingEndsIn}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
-                {/* You can add actual image here later */}
-                <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-                  IMG
-                </div>
+                {/* Fallback Image */}
+                <img
+                  src={
+                    trip.images?.[0]?.url ||
+                    trip.imageUrl ||
+                    "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
+                  }
+                  alt="thumb"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h4 className="font-bold text-white leading-tight mb-1">
@@ -597,13 +661,9 @@ const Booking = () => {
       </div>
 
       {/* --- 4. PAYMENT MODAL OVERLAY --- */}
-      {/* CRITICAL: This modal now only handles the "Processing" state. 
-          Razorpay opens its own secure iframe on top of this. 
-      */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
-
           <div className="relative bg-[#1c1917] border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
             <div className="py-10 flex flex-col items-center text-center">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
