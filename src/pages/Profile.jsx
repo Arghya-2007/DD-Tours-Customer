@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { generateTicket } from "../utils/generateTicket";
 import api from "../services/api";
-import RatingModal from "../components/RatingModal";
+import RatingModal from "../components/RatingModal"; // Ensure this path is correct
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -51,12 +51,9 @@ const Profile = () => {
   // --- 1. DATA NORMALIZER ---
   const normalizeBooking = (b) => {
     const details = b.userDetails || {};
-
-    // ✅ READ LIVE DATA: Access the embedded 'trip' object we created in the backend
     const liveTrip = b.trip || {};
-    const tripStatus = liveTrip.status || "upcoming"; // This will now reflect the Admin's update
+    const tripStatus = liveTrip.status || "upcoming";
 
-    // Payment Method Detection
     const methodRoot = (b.paymentMethod || "").toLowerCase();
     const methodNested = (details.paymentMethod || "").toLowerCase();
     const gateway = (b.gateway || "").toLowerCase();
@@ -72,7 +69,6 @@ const Profile = () => {
       gateway === "razorpay" ||
       (paymentId && paymentId.startsWith("pay_"));
 
-    // Date Logic
     const dateStr =
       liveTrip.fixedDate || b.bookingDate || b.tripDate || b.createdAt;
     const explicitFixed =
@@ -83,15 +79,15 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
-      tripId: b.tripId || liveTrip._id || b.trip?._id,
+      tripId: b.tripId || liveTrip._id || b.trip?._id, // Critical for Reviews
       title: liveTrip.title || b.tripTitle || "Unknown Expedition",
       displayDate: dateStr,
       isDateFixed: isDateFixed,
       price: b.totalAmount || b.totalPrice || b.amount || 0,
       seats: b.seats || 1,
-      status: b.status || "pending", // Payment Status
+      status: b.status || "pending",
       isOnline: isOnline,
-      tripStatus: tripStatus, // ✅ Lifecycle Status (Upcoming/Completed)
+      tripStatus: tripStatus,
       raw: b,
     };
   };
@@ -104,7 +100,6 @@ const Profile = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      // Added timestamp to force fresh fetch
       const [profileRes, bookingsRes] = await Promise.allSettled([
         api.get(`/users/profile?_t=${Date.now()}`),
         api.get(`/bookings/mine?_t=${Date.now()}`),
@@ -429,6 +424,7 @@ const Profile = () => {
                               <span className="text-xs text-center text-emerald-500 font-bold uppercase tracking-wider bg-emerald-500/10 py-2 px-2 rounded-lg border border-emerald-500/20">
                                 Trip Completed
                               </span>
+                              {/* 🔴 FIXED: Button simply updates state. No Modal nested here. */}
                               <button
                                 onClick={() =>
                                   setRatingModal({
@@ -441,21 +437,6 @@ const Profile = () => {
                               >
                                 <Star size={14} fill="currentColor" /> Rate Tour
                               </button>
-                              <RatingModal
-                                isOpen={ratingModal.show}
-                                onClose={() =>
-                                  setRatingModal({
-                                    ...ratingModal,
-                                    show: false,
-                                  })
-                                }
-                                tripId={ratingModal.tripId}
-                                tripTitle={ratingModal.tripTitle}
-                                onSuccess={() => {
-                                  toast.success("Thank you for your feedback!");
-                                  fetchUserData();
-                                }}
-                              />
                             </div>
                           ) : (
                             /* 2. If Trip is NOT Completed (Show Ticket if Confirmed) */
@@ -603,6 +584,22 @@ const Profile = () => {
           </div>
         </div>
       )}
+
+      {/* ✅ HOISTED MODAL: This now sits OUTSIDE the loop */}
+      <RatingModal
+        isOpen={ratingModal.show}
+        onClose={() =>
+          setRatingModal({
+            ...ratingModal,
+            show: false,
+          })
+        }
+        tripId={ratingModal.tripId}
+        tripTitle={ratingModal.tripTitle}
+        onSuccess={() => {
+          fetchUserData(); // Refresh data to update the UI
+        }}
+      />
     </div>
   );
 };
