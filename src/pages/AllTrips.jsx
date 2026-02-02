@@ -403,7 +403,10 @@ const AllTrips = () => {
                   >
                     <div className="h-10 w-16 rounded-lg overflow-hidden shrink-0 relative">
                       <img
-                        src={review.tripImage}
+                        src={
+                          review.tripImage ||
+                          "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070"
+                        }
                         alt={review.tripTitle}
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                       />
