@@ -14,6 +14,7 @@ import {
   Hash,
   CheckCircle2,
   Car,
+  Star, // 🆕 Added Star Icon
 } from "lucide-react";
 
 // --- Helper: Robust Image Extractor ---
@@ -219,7 +220,6 @@ const AllTrips = () => {
                           <AlertTriangle size={12} /> {daysLeft}
                         </span>
                       ) : tour.bookingEndsIn ? (
-                        // Fallback for old data
                         <span className="bg-orange-500/60 backdrop-blur-md border border-orange-500/80 text-orange-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
                           <AlertTriangle size={12} /> {tour.bookingEndsIn}
                         </span>
@@ -252,16 +252,34 @@ const AllTrips = () => {
 
                   {/* --- CONTENT SECTION --- */}
                   <div className="p-7 flex flex-col flex-1 relative">
-                    <div className="space-y-1 mb-4">
-                      <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
-                        {tour.title}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                        <MapPin size={14} className="text-primary" />
-                        <span className="line-clamp-1 tracking-wide">
-                          {tour.location || "Classified Location"}
-                        </span>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="space-y-1 max-w-[70%]">
+                        <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
+                          {tour.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                          <MapPin size={14} className="text-primary" />
+                          <span className="line-clamp-1 tracking-wide">
+                            {tour.location || "Classified Location"}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* ⭐ RATING BADGE ⭐ */}
+                      {tour.averageRating > 0 && (
+                        <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-lg shrink-0 ml-2">
+                          <Star
+                            size={12}
+                            className="fill-yellow-500 text-yellow-500"
+                          />
+                          <span className="text-xs font-bold text-yellow-500">
+                            {tour.averageRating}
+                          </span>
+                          <span className="text-[10px] text-yellow-500/60">
+                            ({tour.totalRatings})
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* TAGS (Places Covered) */}
