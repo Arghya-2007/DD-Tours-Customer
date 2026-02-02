@@ -420,8 +420,8 @@ const Profile = () => {
 
                         {/* --- NEW: TRIP COMPLETED & RATE LOGIC --- */}
                         <div className="flex flex-col gap-2 w-full md:w-auto">
-                          {/* 1. If Trip is Completed */}
-                          {booking.status === "completed" ? (
+                          {/* 🔴 FIX: Check 'booking.tripStatus' (Lifecycle), NOT 'booking.status' (Payment) */}
+                          {booking.tripStatus === "completed" ? (
                             <div className="flex flex-col gap-2 w-full">
                               <span className="text-xs text-center text-emerald-500 font-bold uppercase tracking-wider bg-emerald-500/10 py-2 px-2 rounded-lg border border-emerald-500/20">
                                 Trip Completed
