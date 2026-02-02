@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 
 export const generateTicket = (booking) => {
-  console.log("🎟️ Generating Ticket with MATCHED data:", booking);
+  console.log("🎟️ Generating Ticket with Data:", booking);
 
   const doc = new jsPDF({
     orientation: "landscape",
@@ -9,49 +9,78 @@ export const generateTicket = (booking) => {
     format: [200, 90],
   });
 
-  // --- 1. DATA MAPPING (The Fix) ---
-  // We define "sources" to look in both the root and the 'raw' nest
-  const raw = booking.raw || {};
+  // --- 1. DATA MAPPING (FIXED & ROBUST) ---
+
+  // A. Establish Sources
+  // 'raw' is the original database record.
+  // 'liveTrip' is the populated trip details (if available).
+  const raw = booking.raw || booking;
+  const liveTrip = raw.trip || raw.tour || booking.trip || {};
   const userDetails = booking.userDetails || raw.userDetails || {};
 
-  // NAME: Look in the mapped userDetails object
-  const name = userDetails.fullName || booking.name || "Guest Explorer";
+  // B. Extract Fields
 
-  // TITLE: Root title ("The Hill Station") OR raw.tripTitle
+  // NAME: Prefer user details, fallback to generic
+  const name =
+    userDetails.fullName || booking.name || raw.name || "Guest Explorer";
+
+  // TITLE: Priority -> Live Trip Title > Normalized Title > Snapshot Title
   const title =
-    booking.title || raw.tripTitle || booking.tripTitle || "Unknown Mission";
+    liveTrip.title || booking.title || raw.tripTitle || "Unknown Mission";
 
-  // DATE: Root date ("2026-02-25") OR raw.tripDate
-  const dateStr = booking.date || raw.tripDate || booking.bookingDate || "TBA";
+  // DATE: Priority -> Live Fixed Date > Normalized Display Date > Snapshot Date
+  let dateRaw =
+    liveTrip.fixedDate ||
+    booking.displayDate ||
+    raw.bookingDate ||
+    raw.tripDate ||
+    "TBA";
 
-  // SEATS: Root seats (1) OR raw.seats
+  // C. Date Formatting (Make it look professional)
+  let dateDisplay = dateRaw;
+  // If it looks like an ISO date (YYYY-MM-DD), format it.
+  // If it's "October 2025" or "Expected: ...", leave it alone.
+  if (dateRaw && dateRaw.includes("-") && !dateRaw.includes("Expected")) {
+    const dateObj = new Date(dateRaw);
+    if (!isNaN(dateObj.getTime())) {
+      dateDisplay = dateObj.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+  }
+
+  // SEATS
   const seats = booking.seats || raw.seats || "1";
 
-  // PRICE: Root price (10000) OR raw.totalPrice
-  const rawPrice = booking.price || raw.totalPrice || booking.totalAmount || 0;
+  // PRICE
+  const rawPrice =
+    booking.price || raw.totalPrice || raw.totalAmount || raw.amount || 0;
   const priceDisplay = `INR ${Number(rawPrice).toLocaleString()}`;
 
-  // PHONE: userDetails.phone ("9679812235")
-  const phone = userDetails.phone || booking.phone || "N/A";
+  // PHONE
+  const phone = userDetails.phone || booking.phone || raw.phone || "N/A";
 
-  // PAYMENT METHOD: userDetails.paymentMethod ("pay_on_arrival")
+  // PAYMENT METHOD
   const methodRaw =
     userDetails.paymentMethod ||
     raw.paymentMethod ||
     booking.paymentMethod ||
     "OFFLINE";
-  const methodDisplay = methodRaw.replace(/_/g, " ").toUpperCase(); // Turns "pay_on_arrival" -> "PAY ON ARRIVAL"
+  // Cleans "pay_on_arrival" -> "PAY ON ARRIVAL"
+  const methodDisplay = methodRaw.replace(/_/g, " ").toUpperCase();
 
-  // ID: Root id ("uH74...") OR raw.id
-  // We use the Document ID because "pay_on_arrival" usually doesn't have a paymentId
-  const idRaw = booking.id || raw.id || "REF000";
-  const idDisplay = idRaw.slice(-8).toUpperCase();
+  // ID (Booking Reference)
+  const idRaw = booking.id || raw._id || raw.id || "REF000";
+  const idDisplay =
+    typeof idRaw === "string" ? idRaw.slice(-8).toUpperCase() : "REF-ERR";
 
   // STATUS
   const statusRaw = booking.status || raw.status || "CONFIRMED";
   const statusDisplay = statusRaw.toUpperCase();
 
-  // --- 2. PDF DESIGN (High-Tech Dark Theme) ---
+  // --- 2. PDF DESIGN (Dark Theme) ---
 
   // Background
   doc.setFillColor(20, 20, 20); // Dark Grey
@@ -62,8 +91,10 @@ export const generateTicket = (booking) => {
   doc.rect(0, 0, 12, 90, "F");
 
   // Status Badge
-  const statusColor =
-    statusDisplay === "CONFIRMED" ? [34, 197, 94] : [234, 179, 8];
+  let statusColor = [234, 179, 8]; // Yellow (Pending)
+  if (statusDisplay === "CONFIRMED") statusColor = [34, 197, 94]; // Green
+  if (statusDisplay === "CANCELLED") statusColor = [239, 68, 68]; // Red
+
   doc.setFillColor(...statusColor);
   doc.roundedRect(165, 10, 25, 6, 1, 1, "F");
 
@@ -105,7 +136,7 @@ export const generateTicket = (booking) => {
   doc.text("LAUNCH DATE", col1, row2);
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text(String(dateStr), col1, row2 + 5);
+  doc.text(String(dateDisplay), col1, row2 + 5);
 
   // Phone
   doc.setFontSize(7);
@@ -159,16 +190,19 @@ export const generateTicket = (booking) => {
   doc.setFontSize(6);
   doc.setTextColor(100, 100, 100);
   doc.text("PAYMENT MODE", stubX, 50);
-  doc.setFontSize(8); // Slightly smaller to fit "PAY ON ARRIVAL"
+  doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
   doc.text(methodDisplay, stubX, 55);
 
-  // Scan Code
+  // Scan Code (Visual Placeholder)
   doc.setFontSize(6);
   doc.setTextColor(100, 100, 100);
   doc.text("SCAN FOR ENTRY", stubX, 65);
   doc.setFillColor(255, 255, 255);
   doc.rect(stubX, 68, 15, 15, "F");
+  // Add a little square inside to make it look like a QR code center
+  doc.setFillColor(0, 0, 0);
+  doc.rect(stubX + 5, 68 + 5, 5, 5, "F");
 
   doc.save(`Mission-Pass-${idDisplay}.pdf`);
 };

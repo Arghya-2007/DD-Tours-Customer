@@ -40,9 +40,13 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. DATA NORMALIZER ---
+  // --- 1. DATA NORMALIZER (UPDATED FIX) ---
   const normalizeBooking = (b) => {
     const details = b.userDetails || {};
+
+    // Check if we have populated trip data (Live Data)
+    // This allows the profile to show the NEW date if the admin updates the Trip
+    const liveTrip = b.trip || b.tour || b.package || {};
 
     // Payment Method Detection
     const methodRoot = (b.paymentMethod || "").toLowerCase();
@@ -60,14 +64,17 @@ const Profile = () => {
       gateway === "razorpay" ||
       (paymentId && paymentId.startsWith("pay_"));
 
-    // --- 🗓️ SMART DATE LOGIC ---
-    // 1. Check if the booking explicitly says it's fixed (from Booking.jsx payload)
-    // 2. Fallback: If the date string looks like YYYY-MM-DD
-    const dateStr = b.bookingDate || b.tripDate || b.createdAt;
-    const explicitFixed = b.isFixedDate === true;
+    // --- 🗓️ SMART DATE LOGIC (FIXED) ---
+    // Priority 1: Live Trip Fixed Date (from populated trip object)
+    // Priority 2: Booking Snapshot Date
+    const dateStr =
+      liveTrip.fixedDate || b.bookingDate || b.tripDate || b.createdAt;
 
-    // Fallback detection if 'isFixedDate' is missing (for older bookings)
-    // "2026-05-20" includes hyphens and is valid. "May 2026" usually doesn't have hyphens.
+    // Check if it is fixed
+    const explicitFixed =
+      b.isFixedDate === true || liveTrip.fixedDate !== undefined;
+
+    // Fallback detection
     const looksLikeDate =
       dateStr && dateStr.includes("-") && !isNaN(new Date(dateStr).getTime());
 
@@ -75,9 +82,9 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
-      title: b.tripTitle || b.title || "Unknown Expedition",
+      title: liveTrip.title || b.tripTitle || b.title || "Unknown Expedition", // Also fetch live title
       displayDate: dateStr,
-      isDateFixed: isDateFixed, // Boolean Flag for UI logic
+      isDateFixed: isDateFixed,
       price: b.totalAmount || b.totalPrice || b.amount || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
@@ -94,9 +101,10 @@ const Profile = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
+      // Added timestamp to URL to prevent browser caching
       const [profileRes, bookingsRes] = await Promise.allSettled([
-        api.get("/users/profile"),
-        api.get("/bookings/mine"),
+        api.get(`/users/profile?_t=${Date.now()}`),
+        api.get(`/bookings/mine?_t=${Date.now()}`),
       ]);
 
       if (profileRes.status === "fulfilled" && profileRes.value.data) {
