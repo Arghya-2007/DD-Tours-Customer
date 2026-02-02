@@ -19,7 +19,6 @@ import {
   FileText,
   X,
   Loader2,
-  CreditCard,
   Smartphone,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
@@ -41,11 +40,11 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. DATA NORMALIZER (Fixes Missing/Undefined Data) ---
+  // --- 1. DATA NORMALIZER ---
   const normalizeBooking = (b) => {
     const details = b.userDetails || {};
 
-    // Check ALL possible indicators for online payment
+    // Payment Method Detection
     const methodRoot = (b.paymentMethod || "").toLowerCase();
     const methodNested = (details.paymentMethod || "").toLowerCase();
     const gateway = (b.gateway || "").toLowerCase();
@@ -61,17 +60,29 @@ const Profile = () => {
       gateway === "razorpay" ||
       (paymentId && paymentId.startsWith("pay_"));
 
+    // --- 🗓️ SMART DATE LOGIC ---
+    // 1. Check if the booking explicitly says it's fixed (from Booking.jsx payload)
+    // 2. Fallback: If the date string looks like YYYY-MM-DD
+    const dateStr = b.bookingDate || b.tripDate || b.createdAt;
+    const explicitFixed = b.isFixedDate === true;
+
+    // Fallback detection if 'isFixedDate' is missing (for older bookings)
+    // "2026-05-20" includes hyphens and is valid. "May 2026" usually doesn't have hyphens.
+    const looksLikeDate =
+      dateStr && dateStr.includes("-") && !isNaN(new Date(dateStr).getTime());
+
+    const isDateFixed = explicitFixed || looksLikeDate;
+
     return {
       id: b.id || b._id,
       title: b.tripTitle || b.title || "Unknown Expedition",
-      // Fallback for dates
-      date: b.bookingDate || b.tripDate || b.createdAt,
-      // Fallback for price (Offline vs Online fields)
+      displayDate: dateStr,
+      isDateFixed: isDateFixed, // Boolean Flag for UI logic
       price: b.totalAmount || b.totalPrice || b.amount || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
       isOnline: isOnline,
-      raw: b, // Keep raw data for the Ticket Generator
+      raw: b,
     };
   };
 
@@ -98,9 +109,10 @@ const Profile = () => {
         Array.isArray(bookingsRes.value.data)
       ) {
         const cleanBookings = bookingsRes.value.data.map(normalizeBooking);
-        // Sort Newest First
         const sorted = cleanBookings.sort(
-          (a, b) => new Date(b.date) - new Date(a.date),
+          (a, b) =>
+            new Date(b.raw.createdAt || Date.now()) -
+            new Date(a.raw.createdAt || Date.now()),
         );
         setBookings(sorted);
       }
@@ -140,7 +152,7 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 800)); // UX Pause
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
     const loadingToast = toast.loading("Encrypting & Uploading...");
     try {
@@ -158,10 +170,8 @@ const Profile = () => {
   const getProfileImage = () =>
     user?.photoURL ||
     `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`;
-
   const handleImageError = (e) =>
     (e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`);
-
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
 
   if (loading)
@@ -334,7 +344,6 @@ const Profile = () => {
                       #{booking.id.slice(0, 6)}
                     </div>
 
-                    {/* --- RESPONSIVE LAYOUT FIX: flex-col on mobile, row on desktop --- */}
                     <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                       {/* Trip Info */}
                       <div className="space-y-3">
@@ -356,17 +365,26 @@ const Profile = () => {
                         </h4>
 
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
-                          <span className="flex items-center gap-1.5">
-                            <Calendar size={14} className="text-primary" />{" "}
-                            {new Date(booking.date).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              },
+                          {/* DYNAMIC DATE DISPLAY */}
+                          <span
+                            className={`flex items-center gap-1.5 ${booking.isDateFixed ? "text-gray-300" : "text-purple-400"}`}
+                          >
+                            {booking.isDateFixed ? (
+                              <Calendar size={14} className="text-primary" />
+                            ) : (
+                              <Clock size={14} />
                             )}
+                            {booking.isDateFixed
+                              ? new Date(
+                                  booking.displayDate,
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : `Expected: ${booking.displayDate}`}
                           </span>
+
                           <span className="flex items-center gap-1.5">
                             <User size={14} className="text-primary" />{" "}
                             {booking.seats} Explorers
@@ -374,7 +392,7 @@ const Profile = () => {
                         </div>
                       </div>
 
-                      {/* Price & Action - Aligned Right on Desktop, Stacked on Mobile */}
+                      {/* Price & Action */}
                       <div className="flex flex-col items-start md:items-end justify-between border-t md:border-t-0 border-white/10 pt-4 md:pt-0 min-w-[160px] gap-4">
                         <div className="text-left md:text-right w-full">
                           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
@@ -392,14 +410,20 @@ const Profile = () => {
                           </p>
                         </div>
 
-                        {booking.status === "confirmed" && (
-                          <button
-                            onClick={() => generateTicket(booking)}
-                            className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto"
-                          >
-                            <FileText size={12} /> Download Pass
-                          </button>
-                        )}
+                        {/* --- TICKET BUTTON LOGIC --- */}
+                        {booking.status === "confirmed" &&
+                          (booking.isDateFixed ? (
+                            <button
+                              onClick={() => generateTicket(booking)}
+                              className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto"
+                            >
+                              <FileText size={12} /> Download Pass
+                            </button>
+                          ) : (
+                            <div className="text-xs flex items-center justify-center gap-2 bg-purple-500/10 px-4 py-3 rounded-lg text-purple-400 border border-purple-500/20 w-full md:w-auto cursor-not-allowed opacity-80">
+                              <Clock size={12} /> Date Pending
+                            </div>
+                          ))}
                       </div>
                     </div>
                   </div>
@@ -432,7 +456,6 @@ const Profile = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
-                {/* Read-Only Profile Card */}
                 <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
                   <img
                     src={getProfileImage()}
@@ -453,8 +476,6 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
-
-                {/* Inputs */}
                 <Input
                   label="Comms (Phone)"
                   type="tel"

@@ -181,7 +181,7 @@ const AllTrips = () => {
                   {/* Top Right: URGENCY BADGE (New Field) */}
                   {tour.bookingEndsIn && (
                     <div className="absolute top-4 right-4 animate-pulse">
-                      <span className="bg-red-500/20 backdrop-blur-md border border-red-500/40 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
+                      <span className="bg-red-500/60 backdrop-blur-md border border-red-500/80 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
                         <AlertTriangle size={12} />
                         {tour.bookingEndsIn}
                       </span>
