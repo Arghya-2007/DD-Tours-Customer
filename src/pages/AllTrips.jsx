@@ -330,57 +330,99 @@ const AllTrips = () => {
       </div>
 
       {/* --- NEW SECTION: EXPLORER CHRONICLES (REVIEWS) --- */}
+      {/* --- NEW: EXPLORER CHRONICLES (REVIEWS) --- */}
       {reviews.length > 0 && (
-        <div className="reviews-section max-w-7xl mx-auto border-t border-white/10 pt-16">
-          <div className="flex items-center gap-3 mb-10">
-            <Quote size={32} className="text-primary" />
-            <h2 className="text-3xl md:text-4xl font-header text-white uppercase">
-              Explorer Chronicles
-            </h2>
+        <div className="reviews-section max-w-7xl mx-auto border-t border-white/10 pt-20">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2 text-primary">
+                <Quote size={24} />
+                <span className="text-xs font-bold tracking-[0.2em] uppercase">
+                  Social Proof
+                </span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-header text-white uppercase">
+                Explorer Chronicles
+              </h2>
+            </div>
+            <p className="text-gray-500 text-sm max-w-md text-right hidden md:block">
+              Real stories from the field. See what our operatives are saying
+              about their missions.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {reviews.map((review) => (
               <div
                 key={review.id}
-                className="review-card bg-[#1c1917] p-6 rounded-3xl border border-white/5 relative"
+                className="review-card group bg-[#1c1917] rounded-3xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 flex flex-col"
               >
-                <div className="flex items-center gap-4 mb-4">
+                {/* 1. TRIP IMAGE HEADER */}
+                <div className="h-40 w-full relative overflow-hidden">
                   <img
-                    src={
-                      review.userPhoto ||
-                      "https://ui-avatars.com/api/?name=" +
-                        review.userName +
-                        "&background=ea580c&color=fff"
-                    }
-                    alt={review.userName}
-                    className="w-10 h-10 rounded-full border border-white/10"
+                    src={review.tripImage}
+                    alt={review.tripTitle}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
-                  <div>
-                    <p className="text-sm font-bold text-white">
-                      {review.userName}
+                  {/* Dark Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1c1917] via-[#1c1917]/20 to-transparent opacity-90" />
+
+                  {/* Trip Title Badge */}
+                  <div className="absolute bottom-4 left-6 right-6">
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-wider mb-1">
+                      Mission Report
                     </p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-                      {review.tripTitle || "Verified User"}
+                    <h4 className="text-white font-header text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                      {review.tripTitle}
+                    </h4>
+                  </div>
+                </div>
+
+                {/* 2. REVIEW CONTENT */}
+                <div className="p-6 pt-2 flex-1 flex flex-col">
+                  {/* User Info */}
+                  <div className="flex items-center gap-3 mb-4 -mt-10 relative z-10">
+                    <img
+                      src={
+                        review.userPhoto ||
+                        `https://ui-avatars.com/api/?name=${review.userName}&background=ea580c&color=fff`
+                      }
+                      alt={review.userName}
+                      className="w-12 h-12 rounded-full border-4 border-[#1c1917] shadow-lg"
+                    />
+                    <div className="mt-6">
+                      {" "}
+                      {/* Pushes text down to align */}
+                      <p className="text-sm font-bold text-white leading-none">
+                        {review.userName}
+                      </p>
+                      <div className="flex gap-0.5 mt-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            size={10}
+                            className={
+                              i < review.rating
+                                ? "fill-yellow-500 text-yellow-500"
+                                : "text-gray-700"
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comment */}
+                  <div className="relative">
+                    <Quote
+                      size={20}
+                      className="absolute -top-2 -left-2 text-white/5 rotate-180"
+                    />
+                    <p className="text-gray-400 text-sm leading-relaxed italic pl-2">
+                      "{review.comment}"
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      className={
-                        i < review.rating
-                          ? "fill-yellow-500 text-yellow-500"
-                          : "text-gray-700"
-                      }
-                    />
-                  ))}
-                </div>
-                <p className="text-gray-400 text-sm leading-relaxed italic">
-                  "{review.comment}"
-                </p>
               </div>
             ))}
           </div>
