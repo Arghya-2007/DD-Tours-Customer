@@ -20,6 +20,7 @@ import {
   X,
   Loader2,
   Smartphone,
+  Star, // Added Star icon for Rating
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -40,13 +41,16 @@ const Profile = () => {
     panNo: "",
   });
 
-  // --- 1. DATA NORMALIZER (UPDATED FIX) ---
+  // --- 1. DATA NORMALIZER ---
   const normalizeBooking = (b) => {
     const details = b.userDetails || {};
 
     // Check if we have populated trip data (Live Data)
-    // This allows the profile to show the NEW date if the admin updates the Trip
     const liveTrip = b.trip || b.tour || b.package || {};
+
+    // --- 🆕 FETCH STATUS FROM LIVE TRIP ---
+    // Default to 'upcoming' if not set
+    const tripStatus = liveTrip.status || "upcoming";
 
     // Payment Method Detection
     const methodRoot = (b.paymentMethod || "").toLowerCase();
@@ -64,17 +68,13 @@ const Profile = () => {
       gateway === "razorpay" ||
       (paymentId && paymentId.startsWith("pay_"));
 
-    // --- 🗓️ SMART DATE LOGIC (FIXED) ---
-    // Priority 1: Live Trip Fixed Date (from populated trip object)
-    // Priority 2: Booking Snapshot Date
+    // --- 🗓️ SMART DATE LOGIC ---
     const dateStr =
       liveTrip.fixedDate || b.bookingDate || b.tripDate || b.createdAt;
 
-    // Check if it is fixed
     const explicitFixed =
       b.isFixedDate === true || liveTrip.fixedDate !== undefined;
 
-    // Fallback detection
     const looksLikeDate =
       dateStr && dateStr.includes("-") && !isNaN(new Date(dateStr).getTime());
 
@@ -82,13 +82,14 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
-      title: liveTrip.title || b.tripTitle || b.title || "Unknown Expedition", // Also fetch live title
+      title: liveTrip.title || b.tripTitle || b.title || "Unknown Expedition",
       displayDate: dateStr,
       isDateFixed: isDateFixed,
       price: b.totalAmount || b.totalPrice || b.amount || 0,
       seats: b.seats || 1,
       status: b.status || "pending",
       isOnline: isOnline,
+      tripStatus: tripStatus, // Pass the trip lifecycle status
       raw: b,
     };
   };
@@ -101,7 +102,6 @@ const Profile = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      // Added timestamp to URL to prevent browser caching
       const [profileRes, bookingsRes] = await Promise.allSettled([
         api.get(`/users/profile?_t=${Date.now()}`),
         api.get(`/bookings/mine?_t=${Date.now()}`),
@@ -418,20 +418,40 @@ const Profile = () => {
                           </p>
                         </div>
 
-                        {/* --- TICKET BUTTON LOGIC --- */}
-                        {booking.status === "confirmed" &&
-                          (booking.isDateFixed ? (
-                            <button
-                              onClick={() => generateTicket(booking)}
-                              className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto"
-                            >
-                              <FileText size={12} /> Download Pass
-                            </button>
-                          ) : (
-                            <div className="text-xs flex items-center justify-center gap-2 bg-purple-500/10 px-4 py-3 rounded-lg text-purple-400 border border-purple-500/20 w-full md:w-auto cursor-not-allowed opacity-80">
-                              <Clock size={12} /> Date Pending
+                        {/* --- NEW: TRIP COMPLETED & RATE LOGIC --- */}
+                        <div className="flex flex-col gap-2 w-full md:w-auto">
+                          {/* 1. If Trip is Completed */}
+                          {booking.tripStatus === "completed" ? (
+                            <div className="flex flex-col gap-2 w-full">
+                              <span className="text-xs text-center text-emerald-500 font-bold uppercase tracking-wider bg-emerald-500/10 py-2 px-2 rounded-lg border border-emerald-500/20">
+                                Trip Completed
+                              </span>
+                              <button
+                                onClick={() =>
+                                  toast("Rating System Coming Soon!")
+                                }
+                                className="text-xs flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 px-4 py-3 rounded-lg border border-yellow-500/20 transition-all w-full"
+                              >
+                                <Star size={14} fill="currentColor" /> Rate Tour
+                              </button>
                             </div>
-                          ))}
+                          ) : (
+                            /* 2. If Trip is NOT Completed (Show Ticket if Confirmed) */
+                            booking.status === "confirmed" &&
+                            (booking.isDateFixed ? (
+                              <button
+                                onClick={() => generateTicket(booking)}
+                                className="text-xs flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-gray-300 transition-colors border border-white/5 w-full md:w-auto"
+                              >
+                                <FileText size={12} /> Download Pass
+                              </button>
+                            ) : (
+                              <div className="text-xs flex items-center justify-center gap-2 bg-purple-500/10 px-4 py-3 rounded-lg text-purple-400 border border-purple-500/20 w-full md:w-auto cursor-not-allowed opacity-80">
+                                <Clock size={12} /> Date Pending
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

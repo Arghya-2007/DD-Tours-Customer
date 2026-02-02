@@ -12,6 +12,8 @@ import {
   Calendar,
   AlertTriangle,
   Hash,
+  CheckCircle2,
+  Car,
 } from "lucide-react";
 
 // --- Helper: Robust Image Extractor ---
@@ -25,6 +27,20 @@ const getTourImage = (tour) => {
   return "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop";
 };
 
+// --- Helper: Calculate Days Left ---
+const getDaysLeft = (deadline) => {
+  if (!deadline) return null;
+  const now = new Date();
+  const end = new Date(deadline);
+  const diff = end - now;
+
+  if (diff < 0) return "Closed";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return "Ends Today";
+  return `${days} Days Left`;
+};
+
 const AllTrips = () => {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +50,8 @@ const AllTrips = () => {
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await api.get("/trips");
+        // Add timestamp to prevent caching
+        const response = await api.get(`/trips?_t=${Date.now()}`);
         const data = Array.isArray(response.data)
           ? response.data
           : response.data.trips || [];
@@ -150,117 +167,146 @@ const AllTrips = () => {
           </div>
         ) : filteredTours.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000">
-            {filteredTours.map((tour) => (
-              <Link
-                to={`/tours/${tour._id || tour.id}`}
-                key={tour._id || tour.id}
-                className="trip-card group block bg-[#1c1917] rounded-3xl overflow-hidden border border-white/5 hover:border-primary/40 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(234,88,12,0.15)] flex flex-col h-full"
-              >
-                {/* --- IMAGE SECTION --- */}
-                <div className="relative h-64 overflow-hidden shrink-0">
-                  <div className="absolute inset-0 bg-gray-900 animate-pulse" />
-                  <img
-                    src={getTourImage(tour)}
-                    alt={tour.title}
-                    className="relative w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
-                    onError={(e) => {
-                      e.target.src =
-                        "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1c1917] via-transparent to-transparent opacity-90" />
+            {filteredTours.map((tour) => {
+              // Calculate Status Logic
+              const daysLeft = getDaysLeft(tour.bookingDeadline);
+              const isCompleted = tour.status === "completed";
+              const isOngoing = tour.status === "ongoing";
+              const isClosed = daysLeft === "Closed";
 
-                  {/* Top Left: Duration */}
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                      <Clock size={12} className="text-primary" />
-                      {tour.duration}
-                    </span>
-                  </div>
+              return (
+                <Link
+                  to={`/tours/${tour._id || tour.id}`}
+                  key={tour._id || tour.id}
+                  className={`trip-card group block bg-[#1c1917] rounded-3xl overflow-hidden border transition-all duration-500 flex flex-col h-full
+                        ${isCompleted ? "border-white/5 opacity-70 grayscale" : "border-white/5 hover:border-primary/40 hover:shadow-[0_20px_50px_rgba(234,88,12,0.15)]"}
+                        `}
+                >
+                  {/* --- IMAGE SECTION --- */}
+                  <div className="relative h-64 overflow-hidden shrink-0">
+                    <div className="absolute inset-0 bg-gray-900 animate-pulse" />
+                    <img
+                      src={getTourImage(tour)}
+                      alt={tour.title}
+                      className="relative w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1c1917] via-transparent to-transparent opacity-90" />
 
-                  {/* Top Right: URGENCY BADGE (New Field) */}
-                  {tour.bookingEndsIn && (
-                    <div className="absolute top-4 right-4 animate-pulse">
-                      <span className="bg-red-500/60 backdrop-blur-md border border-red-500/80 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
-                        <AlertTriangle size={12} />
-                        {tour.bookingEndsIn}
+                    {/* Top Left: Duration */}
+                    <div className="absolute top-4 left-4">
+                      <span className="bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                        <Clock size={12} className="text-primary" />
+                        {tour.duration}
                       </span>
                     </div>
-                  )}
 
-                  {/* Bottom Left: DATE BADGE (New Field) */}
-                  <div className="absolute bottom-4 left-4">
-                    {tour.fixedDate ? (
-                      <span className="bg-emerald-900/80 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                        <Calendar size={12} />
-                        {new Date(tour.fixedDate).toLocaleDateString(
-                          undefined,
-                          { day: "2-digit", month: "short" },
-                        )}
-                      </span>
-                    ) : (
-                      <span className="bg-blue-900/80 backdrop-blur-md border border-blue-500/30 text-blue-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                        <Compass size={12} />
-                        Flexible
-                      </span>
-                    )}
-                  </div>
-                </div>
+                    {/* Top Right: STATUS / URGENCY BADGE */}
+                    <div className="absolute top-4 right-4">
+                      {isCompleted ? (
+                        <span className="bg-slate-700/80 backdrop-blur-md border border-slate-500 text-slate-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
+                          <CheckCircle2 size={12} /> Completed
+                        </span>
+                      ) : isOngoing ? (
+                        <span className="bg-blue-600/80 backdrop-blur-md border border-blue-400 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
+                          <Car size={12} /> Ongoing
+                        </span>
+                      ) : daysLeft && daysLeft !== "Closed" ? (
+                        <span className="bg-red-500/60 backdrop-blur-md border border-red-500/80 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
+                          <AlertTriangle size={12} /> {daysLeft}
+                        </span>
+                      ) : tour.bookingEndsIn ? (
+                        // Fallback for old data
+                        <span className="bg-orange-500/60 backdrop-blur-md border border-orange-500/80 text-orange-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
+                          <AlertTriangle size={12} /> {tour.bookingEndsIn}
+                        </span>
+                      ) : null}
+                    </div>
 
-                {/* --- CONTENT SECTION --- */}
-                <div className="p-7 flex flex-col flex-1 relative">
-                  <div className="space-y-1 mb-4">
-                    <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
-                      {tour.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                      <MapPin size={14} className="text-primary" />
-                      <span className="line-clamp-1 tracking-wide">
-                        {tour.location || "Classified Location"}
-                      </span>
+                    {/* Bottom Left: DATE BADGE */}
+                    <div className="absolute bottom-4 left-4">
+                      {tour.fixedDate ? (
+                        <span className="bg-emerald-900/80 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                          <Calendar size={12} />
+                          {new Date(tour.fixedDate).toLocaleDateString(
+                            undefined,
+                            { day: "2-digit", month: "short" },
+                          )}
+                        </span>
+                      ) : tour.expectedMonth ? (
+                        <span className="bg-purple-900/80 backdrop-blur-md border border-purple-500/30 text-purple-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                          <Calendar size={12} />
+                          {tour.expectedMonth}
+                        </span>
+                      ) : (
+                        <span className="bg-blue-900/80 backdrop-blur-md border border-blue-500/30 text-blue-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                          <Compass size={12} />
+                          Flexible
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* TAGS (Places Covered) */}
-                  <div className="flex flex-wrap gap-2 mb-6 min-h-[1.5rem]">
-                    {tour.placesCovered?.slice(0, 3).map((place, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] font-bold text-gray-400 uppercase bg-white/5 border border-white/5 px-2 py-1 rounded flex items-center gap-1"
-                      >
-                        <Hash size={8} className="text-gray-600" /> {place}
-                      </span>
-                    ))}
-                    {(tour.placesCovered?.length || 0) > 3 && (
-                      <span className="text-[10px] font-bold text-primary px-1 py-1">
-                        +{tour.placesCovered.length - 3}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-6 mt-auto" />
-
-                  {/* Footer: Price & CTA */}
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-1">
-                        Investment
-                      </p>
-                      <p className="text-2xl md:text-3xl font-header text-white">
-                        ₹{Number(tour.price).toLocaleString()}
-                      </p>
+                  {/* --- CONTENT SECTION --- */}
+                  <div className="p-7 flex flex-col flex-1 relative">
+                    <div className="space-y-1 mb-4">
+                      <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
+                        {tour.title}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                        <MapPin size={14} className="text-primary" />
+                        <span className="line-clamp-1 tracking-wide">
+                          {tour.location || "Classified Location"}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="relative w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white group-hover:bg-primary group-hover:border-primary transition-all duration-500 transform group-hover:rotate-[-45deg]">
-                        <ArrowRight size={22} />
+                    {/* TAGS (Places Covered) */}
+                    <div className="flex flex-wrap gap-2 mb-6 min-h-[1.5rem]">
+                      {tour.placesCovered?.slice(0, 3).map((place, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] font-bold text-gray-400 uppercase bg-white/5 border border-white/5 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <Hash size={8} className="text-gray-600" /> {place}
+                        </span>
+                      ))}
+                      {(tour.placesCovered?.length || 0) > 3 && (
+                        <span className="text-[10px] font-bold text-primary px-1 py-1">
+                          +{tour.placesCovered.length - 3}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-6 mt-auto" />
+
+                    {/* Footer: Price & CTA */}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-1">
+                          Investment
+                        </p>
+                        <p className="text-2xl md:text-3xl font-header text-white">
+                          ₹{Number(tour.price).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div
+                          className={`relative w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white transition-all duration-500 transform group-hover:rotate-[-45deg] ${isCompleted ? "" : "group-hover:bg-primary group-hover:border-primary"}`}
+                        >
+                          <ArrowRight size={22} />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-32 border border-dashed border-white/10 rounded-[2.5rem] bg-white/5">

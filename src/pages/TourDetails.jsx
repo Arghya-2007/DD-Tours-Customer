@@ -16,6 +16,7 @@ import {
   Calendar,
   AlertTriangle,
   Hash,
+  CheckCircle2,
 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -71,6 +72,19 @@ const getPlacesCovered = (tour) => {
   if (typeof tour.placesCovered === "string")
     return tour.placesCovered.split(",").map((p) => p.trim());
   return [];
+};
+
+// --- HELPER 4: Calculate Time Left ---
+const calculateTimeLeft = (deadline) => {
+  if (!deadline) return null;
+  const diff = new Date(deadline) - new Date();
+  if (diff < 0) return "EXPIRED";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  if (days > 0) return `${days} Days Left`;
+  return `${hours} Hours Left`;
 };
 
 const TourDetails = () => {
@@ -140,6 +154,11 @@ const TourDetails = () => {
 
   const inclusionsList = getTourInclusions(tour);
   const placesList = getPlacesCovered(tour);
+  const timeLeft = calculateTimeLeft(tour.bookingDeadline);
+  const isBookingClosed =
+    timeLeft === "EXPIRED" ||
+    tour.status === "completed" ||
+    tour.status === "ongoing";
 
   // --- Logic for Date Display ---
   let dateDisplay = {
@@ -222,6 +241,13 @@ const TourDetails = () => {
                   <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md">
                     <Clock size={16} className="text-primary" /> {tour.duration}
                   </span>
+                  {/* Status Badge */}
+                  {tour.status === "completed" && (
+                    <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 backdrop-blur-md">
+                      <CheckCircle2 size={16} /> Mission Completed
+                    </span>
+                  )}
+
                   {/* Places Tag Group */}
                   {placesList.length > 0 && (
                     <div className="flex items-center gap-2 ml-2 border-l border-white/20 pl-4">
@@ -320,14 +346,29 @@ const TourDetails = () => {
           {/* RIGHT COLUMN: BOOKING CARD */}
           <div className="lg:col-span-1">
             <div className="content-block sticky top-24 bg-[#1c1917] p-8 rounded-3xl border border-white/10 shadow-2xl">
-              {/* Urgency Alert */}
-              {tour.bookingEndsIn && (
-                <div className="mb-6 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center justify-center gap-2 animate-pulse">
-                  <AlertTriangle size={18} className="text-red-400" />
-                  <span className="text-red-200 text-xs font-bold uppercase tracking-wider">
-                    {tour.bookingEndsIn}
+              {/* STATUS ALERT: Completed/Ongoing/Closed */}
+              {isBookingClosed ? (
+                <div className="mb-6 bg-slate-700/30 border border-slate-600/50 p-4 rounded-xl flex flex-col items-center justify-center gap-1 text-center">
+                  <AlertTriangle size={24} className="text-slate-400 mb-1" />
+                  <span className="text-slate-200 font-bold uppercase tracking-wider">
+                    {tour.status === "completed"
+                      ? "Mission Accomplished"
+                      : "Booking Closed"}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    Registration for this timeline is closed.
                   </span>
                 </div>
+              ) : (
+                /* Urgency Alert (Only if Open) */
+                timeLeft && (
+                  <div className="mb-6 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+                    <Clock size={18} className="text-red-400" />
+                    <span className="text-red-200 text-xs font-bold uppercase tracking-wider">
+                      Hurry! {timeLeft}
+                    </span>
+                  </div>
+                )
               )}
 
               <div className="mb-8 text-center border-b border-white/5 pb-8">
@@ -365,16 +406,27 @@ const TourDetails = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => navigate(`/booking/${id}`)}
-                className="w-full block bg-primary hover:bg-orange-600 text-white text-center py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(234,88,12,0.4)]"
-              >
-                Join Expedition
-              </button>
+              {isBookingClosed ? (
+                <button
+                  disabled
+                  className="w-full block bg-slate-800 text-slate-500 text-center py-4 rounded-xl font-bold text-lg cursor-not-allowed"
+                >
+                  Registration Closed
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(`/booking/${id}`)}
+                  className="w-full block bg-primary hover:bg-orange-600 text-white text-center py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-[1.02] shadow-[0_4px_20px_rgba(234,88,12,0.4)]"
+                >
+                  Join Expedition
+                </button>
+              )}
 
-              <p className="text-center text-xs text-gray-600 mt-4">
-                *Slots are filling fast for this season.
-              </p>
+              {!isBookingClosed && (
+                <p className="text-center text-xs text-gray-600 mt-4">
+                  *Slots are filling fast for this season.
+                </p>
+              )}
             </div>
           </div>
         </div>
