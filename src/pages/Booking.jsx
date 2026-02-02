@@ -12,13 +12,12 @@ import {
   ShieldCheck,
   CheckCircle,
   AlertCircle,
-  AlertTriangle,
   Lock,
   MessageCircle,
   Check,
   Eye,
-  Clock,
   CalendarDays,
+  Clock,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
@@ -39,16 +38,17 @@ const Booking = () => {
 
   // --- FORM STATE ---
   const [guests, setGuests] = useState(1);
-  // We no longer let user pick dates. This holds the Admin's setting.
   const [scheduleValue, setScheduleValue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("pay_on_arrival");
 
+  // --- USER DETAILS ---
   const [userDetails, setUserDetails] = useState({
     fullName: "",
     phone: "",
     address: "",
     aadharNo: "",
   });
+
   const [isPhoneValid, setIsPhoneValid] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
@@ -67,6 +67,7 @@ const Booking = () => {
   // 1. FETCH DATA
   useEffect(() => {
     setViewers(Math.floor(Math.random() * 5) + 2);
+
     const loadData = async () => {
       try {
         setLoading(true);
@@ -78,7 +79,7 @@ const Booking = () => {
         const tripData = tripRes.data.trip || tripRes.data;
         setTrip(tripData);
 
-        // --- 🔒 LOGIC: AUTO-SET DATE FROM ADMIN ---
+        // --- SMART DATE LOGIC (Admin Driven) ---
         if (tripData.fixedDate) {
           setScheduleValue(tripData.fixedDate);
         } else if (tripData.expectedMonth) {
@@ -123,9 +124,13 @@ const Booking = () => {
     const updatedDetails = { ...userDetails, [name]: value };
     setUserDetails(updatedDetails);
     localStorage.setItem("bookingDraft", JSON.stringify(updatedDetails));
-    if (name === "phone") validatePhone(value);
+
+    if (name === "phone") {
+      validatePhone(value);
+    }
   };
 
+  // 3. CALCULATIONS
   const pricePerPerson = trip?.price || 0;
   const taxes = pricePerPerson * guests * 0.03;
   const totalAmount = pricePerPerson * guests + taxes;
@@ -147,21 +152,19 @@ const Booking = () => {
   const finalizeBooking = async () => {
     setSubmitting(true);
 
-    // Payload Setup
     const bookingPayload = {
       tripId: trip._id || trip.id,
       userId: user.uid,
       seats: parseInt(guests),
       tripTitle: trip.title,
-      // We send the Auto-Set value (Date or Month string)
-      bookingDate: scheduleValue,
+      bookingDate: scheduleValue, // Using the auto-set date
       totalAmount,
       userDetails: { ...userDetails, paymentMethod },
-      // Pass the scheduling type so backend knows if it's tentative
       isFixedDate: !!trip.fixedDate,
       paymentStatus: "pending",
     };
 
+    // SCENARIO 1: PAY ON ARRIVAL
     if (paymentMethod === "pay_on_arrival") {
       try {
         const res = await api.post("/bookings/book", bookingPayload);
@@ -177,23 +180,27 @@ const Booking = () => {
       return;
     }
 
-    // Online Payment Flow
+    // SCENARIO 2: ONLINE PAYMENT
     setPaymentProcessing(true);
     try {
       const isLoaded = await loadRazorpayScript();
-      if (!isLoaded) throw new Error("Razorpay SDK failed.");
+      if (!isLoaded) {
+        throw new Error("Razorpay SDK failed to load. Check your internet.");
+      }
 
       const orderRes = await api.post("/payments/create-order", {
         amount: totalAmount,
       });
+      const orderData = orderRes.data;
+
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: orderRes.data.amount,
-        currency: orderRes.data.currency,
+        amount: orderData.amount,
+        currency: orderData.currency,
         name: "DD Tours",
         description: `Expedition: ${trip.title}`,
         image: "https://your-logo-url.com/logo.png",
-        order_id: orderRes.data.id,
+        order_id: orderData.id,
         handler: async function (response) {
           try {
             const verifyRes = await api.post("/payments/verify", {
@@ -203,18 +210,25 @@ const Booking = () => {
               bookingDetails: {
                 ...bookingPayload,
                 userEmail: user.email,
-                userDetails: { ...userDetails, email: user.email },
+                userDetails: {
+                  ...userDetails,
+                  paymentMethod,
+                  email: user.email,
+                },
               },
             });
+
             if (verifyRes.data.success) {
               localStorage.removeItem("bookingDraft");
               setShowPaymentModal(false);
               navigate("/success", {
                 state: { booking: { id: verifyRes.data.bookingId } },
               });
+            } else {
+              throw new Error("Payment verification failed.");
             }
           } catch (err) {
-            setError("Payment verification failed.");
+            setError("Payment verified failed at backend.");
             setPaymentProcessing(false);
             setSubmitting(false);
           }
@@ -226,16 +240,18 @@ const Booking = () => {
         },
         theme: { color: "#ea580c" },
         modal: {
-          ondismiss: () => {
+          ondismiss: function () {
             setPaymentProcessing(false);
             setSubmitting(false);
             setShowPaymentModal(false);
           },
         },
       };
+
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
     } catch (err) {
+      console.error("Payment Error:", err);
       setError("Payment initiation failed.");
       setSubmitting(false);
       setPaymentProcessing(false);
@@ -243,7 +259,11 @@ const Booking = () => {
     }
   };
 
-  const whatsappUrl = trip ? `https://wa.me/${WHATSAPP_NUMBER}?text=Hi` : "#";
+  const whatsappUrl = trip
+    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+        `Hi ${COMPANY_NAME}, I'm interested in the '${trip.title}' expedition for ${guests} people. Can you help me with some details before I book?`,
+      )}`
+    : "#";
 
   if (loading)
     return (
@@ -255,6 +275,7 @@ const Booking = () => {
   return (
     <div className="min-h-screen bg-[#0c0a09] text-gray-200 py-12 px-6 font-sans">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
+        {/* --- LEFT: BOOKING FORM --- */}
         <div className="lg:col-span-2 space-y-8">
           <div>
             <h1 className="text-3xl font-header text-white uppercase mb-2">
@@ -267,26 +288,23 @@ const Booking = () => {
           </div>
 
           <form onSubmit={handleInitialSubmit} className="space-y-8">
+            {/* 1. MISSION DETAILS (Smart Date Display) */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5 relative overflow-hidden">
-              {/* STATUS BANNER */}
-              <div className="absolute top-0 right-0 px-4 py-2 rounded-bl-2xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 border-l border-b bg-white/5 border-white/10">
-                {trip.fixedDate ? (
-                  <span className="text-emerald-400">
-                    <Lock size={12} /> Date Confirmed
+              {/* Fixed Date Watermark */}
+              {trip.fixedDate && (
+                <div className="absolute top-0 right-0 bg-emerald-500/10 border-l border-b border-emerald-500/20 px-4 py-2 rounded-bl-2xl">
+                  <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Lock size={12} /> Fixed Schedule
                   </span>
-                ) : (
-                  <span className="text-purple-400">
-                    <Clock size={12} /> Tentative Schedule
-                  </span>
-                )}
-              </div>
+                </div>
+              )}
 
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <Calendar className="text-primary" size={20} /> Mission Timeline
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* --- READ ONLY SCHEDULE DISPLAY --- */}
+                {/* --- READ ONLY SCHEDULE DISPLAY (ADMIN CONTROLLED) --- */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Launch Schedule
@@ -327,7 +345,6 @@ const Booking = () => {
                       </>
                     )}
                   </div>
-                  {/* Disclaimer */}
                   <p className="text-[10px] text-gray-500 mt-1">
                     *{" "}
                     {trip.fixedDate
@@ -350,7 +367,7 @@ const Booking = () => {
                       min="1"
                       max="12"
                       required
-                      className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pl-12 text-white focus:border-primary outline-none"
+                      className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pl-12 text-white focus:border-primary focus:outline-none transition-colors"
                       value={guests}
                       onChange={(e) => setGuests(e.target.value)}
                     />
@@ -359,10 +376,7 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* ... Explorer Data & Payment Sections (Keep existing code from previous step) ... */}
-            {/* COPY PASTE THE REST OF THE FORM FROM PREVIOUS STEP HERE (Name, Phone, Payment, Summary) */}
-            {/* For brevity, I am showing the critical DATE fix above. Assume standard form below. */}
-
+            {/* 2. EXPLORER DATA */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <ShieldCheck className="text-primary" size={20} /> Explorer Data
@@ -381,19 +395,46 @@ const Booking = () => {
                     onChange={handleUserChange}
                   />
                 </div>
+
                 <div className="space-y-2 relative">
-                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500 flex justify-between">
                     Phone Number
+                    {isPhoneValid === true && (
+                      <span className="text-green-500 text-[10px] flex items-center gap-1">
+                        <Check size={10} /> Valid
+                      </span>
+                    )}
+                    {isPhoneValid === false && (
+                      <span className="text-red-500 text-[10px] flex items-center gap-1">
+                        <AlertCircle size={10} /> Invalid Format
+                      </span>
+                    )}
                   </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    required
-                    className={`w-full bg-black/20 border rounded-xl p-4 text-white focus:outline-none ${isPhoneValid === false ? "border-red-500" : "border-white/10"}`}
-                    value={userDetails.phone}
-                    onChange={handleUserChange}
-                  />
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="phone"
+                      required
+                      className={`w-full bg-black/20 border rounded-xl p-4 text-white focus:outline-none transition-colors ${
+                        isPhoneValid === false
+                          ? "border-red-500/50 focus:border-red-500"
+                          : isPhoneValid === true
+                            ? "border-green-500/50 focus:border-green-500"
+                            : "border-white/10 focus:border-primary"
+                      }`}
+                      placeholder="10-digit Mobile Number"
+                      value={userDetails.phone}
+                      onChange={handleUserChange}
+                    />
+                    {isPhoneValid === true && (
+                      <CheckCircle
+                        className="absolute right-4 top-4 text-green-500"
+                        size={20}
+                      />
+                    )}
+                  </div>
                 </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Address
@@ -410,14 +451,14 @@ const Booking = () => {
               </div>
             </div>
 
+            {/* 3. PAYMENT SELECTION */}
             <div className="bg-[#1c1917] p-6 rounded-3xl border border-white/5">
               <h2 className="text-xl font-header text-white mb-6 flex items-center gap-2">
                 <Wallet className="text-primary" size={20} /> Payment Method
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* ... Payment Options (Same as before) ... */}
                 <label
-                  className={`cursor-pointer relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${paymentMethod === "upi" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20"}`}
+                  className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "upi" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
                   <input
                     type="radio"
@@ -427,11 +468,17 @@ const Booking = () => {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     checked={paymentMethod === "upi"}
                   />
-                  <QrCode size={28} />
+                  <QrCode
+                    className={
+                      paymentMethod === "upi" ? "text-primary" : "text-gray-400"
+                    }
+                    size={28}
+                  />
                   <span className="font-bold text-sm">UPI / QR</span>
                 </label>
+
                 <label
-                  className={`cursor-pointer relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${paymentMethod === "card" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20"}`}
+                  className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "card" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
                   <input
                     type="radio"
@@ -441,11 +488,19 @@ const Booking = () => {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     checked={paymentMethod === "card"}
                   />
-                  <CreditCard size={28} />
-                  <span className="font-bold text-sm">Card</span>
+                  <CreditCard
+                    className={
+                      paymentMethod === "card"
+                        ? "text-primary"
+                        : "text-gray-400"
+                    }
+                    size={28}
+                  />
+                  <span className="font-bold text-sm">Credit Card</span>
                 </label>
+
                 <label
-                  className={`cursor-pointer relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${paymentMethod === "pay_on_arrival" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20"}`}
+                  className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === "pay_on_arrival" ? "border-primary bg-primary/10" : "border-white/5 bg-black/20 hover:bg-white/5"}`}
                 >
                   <input
                     type="radio"
@@ -455,16 +510,54 @@ const Booking = () => {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     checked={paymentMethod === "pay_on_arrival"}
                   />
-                  <MapPin size={28} />
+                  <MapPin
+                    className={
+                      paymentMethod === "pay_on_arrival"
+                        ? "text-primary"
+                        : "text-gray-400"
+                    }
+                    size={28}
+                  />
                   <span className="font-bold text-sm">Pay at Office</span>
                 </label>
               </div>
             </div>
 
+            {/* --- RESTORED: WHATSAPP DISCUSSION OPTION --- */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-500 p-2 rounded-full text-black">
+                  <MessageCircle size={20} />
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-sm">
+                    Have doubts about this Tour?
+                  </h4>
+                  <p className="text-gray-400 text-xs">
+                    Chat with Management Team directly before booking.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whitespace-nowrap bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors"
+              >
+                Discuss on WhatsApp
+              </a>
+            </div>
+
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-3 text-red-500">
+                <AlertCircle size={20} /> {error}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-5 bg-primary hover:bg-orange-600 text-white font-bold text-lg rounded-full shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-all"
+              className="w-full py-5 bg-primary hover:bg-orange-600 text-white font-bold text-lg rounded-full shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all transform hover:scale-[1.01]"
             >
               {submitting
                 ? "Processing..."
@@ -473,16 +566,28 @@ const Booking = () => {
           </form>
         </div>
 
-        {/* RIGHT SUMMARY COLUMN */}
+        {/* --- RIGHT: ORDER SUMMARY (Restored) --- */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-2xl">
+            {/* FOMO BADGE */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg flex items-center gap-1 animate-pulse">
+              <Eye size={12} /> {viewers} Others Viewing
+            </div>
+
             <h3 className="text-xl font-header text-white mb-6">
               Manifest Summary
             </h3>
+
             <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
-              <div className="w-16 h-16 rounded-lg bg-gray-800 overflow-hidden">
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-white/10">
+                {/* Fallback Image Logic */}
                 <img
-                  src={trip.images?.[0]?.url || trip.imageUrl}
+                  src={
+                    trip.images?.[0]?.url ||
+                    trip.imageUrl ||
+                    "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1"
+                  }
+                  alt="Thumb"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -490,9 +595,31 @@ const Booking = () => {
                 <h4 className="font-bold text-white leading-tight mb-1">
                   {trip.title}
                 </h4>
-                <p className="text-xs text-gray-500">{trip.duration}</p>
+                <p className="text-xs text-gray-500">
+                  {trip.duration} • {trip.location}
+                </p>
               </div>
             </div>
+
+            <div className="space-y-3 text-sm text-gray-400">
+              <div className="flex justify-between">
+                <span>Base Cost</span>
+                <span className="text-white">
+                  ₹{pricePerPerson.toLocaleString()} x {guests}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Taxes & Permits (3%)</span>
+                <span className="text-white">₹{taxes.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Platform Fee</span>
+                <span className="text-primary font-bold uppercase text-xs">
+                  Waived
+                </span>
+              </div>
+            </div>
+
             <div className="mt-6 pt-6 border-t border-white/10 flex justify-between items-end">
               <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">
                 Total
@@ -501,12 +628,32 @@ const Booking = () => {
                 ₹{totalAmount.toLocaleString()}
               </span>
             </div>
+
+            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-500 uppercase tracking-widest">
+              <Lock size={12} /> Secure Encryption
+            </div>
           </div>
         </div>
       </div>
+
+      {/* --- PAYMENT MODAL --- */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90">
-          <div className="text-white">Loading Payment...</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+          <div className="relative bg-[#1c1917] border border-white/10 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="py-10 flex flex-col items-center text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+              <h4 className="text-white font-bold text-lg">
+                Connecting to Secure Gateway
+              </h4>
+              <p className="text-gray-500 text-sm mt-2">
+                Please wait while we initialize Razorpay...
+              </p>
+              <p className="text-xs text-gray-600 mt-4">
+                Do not refresh the page.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
