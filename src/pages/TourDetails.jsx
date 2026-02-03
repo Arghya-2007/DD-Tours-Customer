@@ -18,6 +18,9 @@ import {
   AlertTriangle,
   Hash,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Milestone,
 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -75,7 +78,21 @@ const getPlacesCovered = (tour) => {
   return [];
 };
 
-// --- HELPER 4: Calculate Time Left ---
+// --- HELPER 4: Safe Itinerary Parser (NEW) ---
+const getItinerary = (tour) => {
+  if (!tour?.itinerary) return [];
+  if (Array.isArray(tour.itinerary)) return tour.itinerary;
+  // If it's a string (e.g. from a simple text area), split by newline or "Day X"
+  if (typeof tour.itinerary === "string") {
+    return tour.itinerary
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => ({ description: line }));
+  }
+  return [];
+};
+
+// --- HELPER 5: Calculate Time Left ---
 const calculateTimeLeft = (deadline) => {
   if (!deadline) return null;
   const diff = new Date(deadline) - new Date();
@@ -94,6 +111,7 @@ const TourDetails = () => {
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [isDescExpanded, setIsDescExpanded] = useState(false); // 🆕 For long text
   const container = useRef();
 
   useEffect(() => {
@@ -155,6 +173,7 @@ const TourDetails = () => {
 
   const inclusionsList = getTourInclusions(tour);
   const placesList = getPlacesCovered(tour);
+  const itineraryList = getItinerary(tour); // 🆕
   const timeLeft = calculateTimeLeft(tour.bookingDeadline);
   const isBookingClosed =
     timeLeft === "EXPIRED" ||
@@ -186,7 +205,6 @@ const TourDetails = () => {
     };
   }
 
-  // 🔴 FIX: Changed 'trip' to 'tour' in this object
   const tripSchema = {
     "@context": "https://schema.org/",
     "@type": "Product",
@@ -217,7 +235,6 @@ const TourDetails = () => {
       ref={container}
       className="min-h-screen bg-[#0c0a09] text-gray-100 font-sans"
     >
-      {/* 🔴 FIX: Changed 'trip' to 'tour' in SEO props */}
       <SEO
         title={tour.title}
         description={`Book ${tour.title}. Duration: ${tour.duration}. Location: ${tour.location}. Starting at ₹${tour.price}. Verified Reviews & Secure Booking.`}
@@ -225,8 +242,8 @@ const TourDetails = () => {
         schema={tripSchema}
       />
 
-      {/* --- HERO SECTION --- */}
-      <div className="hero-container relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-black">
+      {/* --- HERO SECTION (Optimized for Mobile) --- */}
+      <div className="hero-container relative h-[50vh] md:h-[70vh] w-full overflow-hidden bg-black">
         {images.map((img, index) => (
           <div
             key={index}
@@ -250,12 +267,12 @@ const TourDetails = () => {
               <div className="p-2 bg-white/10 rounded-full group-hover:bg-primary transition-colors">
                 <ArrowLeft size={18} />
               </div>
-              <span className="text-sm font-bold uppercase tracking-widest">
+              <span className="text-sm font-bold uppercase tracking-widest hidden md:inline-block">
                 Abort & Return
               </span>
             </button>
 
-            <div className="flex flex-col md:flex-row md:items-end gap-6 justify-between">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 justify-between">
               <div className="content-block">
                 <div className="flex items-center gap-2 text-primary mb-2">
                   <Mountain size={20} />
@@ -263,12 +280,12 @@ const TourDetails = () => {
                     Expedition File #{id.slice(-4)}
                   </span>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-header text-white uppercase leading-none mb-4 drop-shadow-2xl">
+                <h1 className="text-3xl md:text-6xl font-header text-white uppercase leading-none mb-4 drop-shadow-2xl">
                   {tour.title}
                 </h1>
 
                 {/* HERO BADGES */}
-                <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-gray-200">
+                <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-gray-200">
                   <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md">
                     <MapPin size={16} className="text-primary" />{" "}
                     {tour.location}
@@ -279,22 +296,8 @@ const TourDetails = () => {
                   {/* Status Badge */}
                   {tour.status === "completed" && (
                     <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 backdrop-blur-md">
-                      <CheckCircle2 size={16} /> Mission Completed
+                      <CheckCircle2 size={16} /> Completed
                     </span>
-                  )}
-
-                  {/* Places Tag Group */}
-                  {placesList.length > 0 && (
-                    <div className="flex items-center gap-2 ml-2 border-l border-white/20 pl-4">
-                      {placesList.slice(0, 3).map((place, i) => (
-                        <span
-                          key={i}
-                          className="text-xs font-bold uppercase text-gray-400 flex items-center gap-1"
-                        >
-                          <Hash size={10} /> {place}
-                        </span>
-                      ))}
-                    </div>
                   )}
                 </div>
               </div>
@@ -319,19 +322,93 @@ const TourDetails = () => {
       {/* --- CONTENT GRID --- */}
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* LEFT COLUMN */}
+          {/* --- LEFT COLUMN: DETAILS --- */}
           <div className="lg:col-span-2 space-y-12">
-            {/* Description */}
-            <div className="content-block space-y-4">
-              <h3 className="text-2xl font-header text-white uppercase flex items-center gap-3">
+            {/* 1. Description (Optimized for Large Text) */}
+            <div className="content-block bg-[#1c1917] p-6 md:p-8 rounded-3xl border border-white/5">
+              <h3 className="text-2xl font-header text-white uppercase flex items-center gap-3 mb-6">
                 <Shield size={24} className="text-primary" /> Mission Brief
               </h3>
-              <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-line border-l-2 border-primary/30 pl-6">
-                {tour.description || "Classified mission data unavailable."}
-              </p>
+              <div
+                className={`relative overflow-hidden transition-all duration-500 ease-in-out ${isDescExpanded ? "max-h-[2000px]" : "max-h-[250px]"}`}
+              >
+                <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-line">
+                  {tour.description || "Classified mission data unavailable."}
+                </p>
+                {/* Gradient Overlay when collapsed */}
+                {!isDescExpanded && (
+                  <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#1c1917] to-transparent" />
+                )}
+              </div>
+
+              {/* Read More Toggle */}
+              {tour.description?.length > 300 && (
+                <button
+                  onClick={() => setIsDescExpanded(!isDescExpanded)}
+                  className="mt-4 flex items-center gap-2 text-primary font-bold uppercase text-xs tracking-widest hover:text-white transition-colors"
+                >
+                  {isDescExpanded ? (
+                    <>
+                      Read Less <ChevronUp size={16} />
+                    </>
+                  ) : (
+                    <>
+                      Read Full Brief <ChevronDown size={16} />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
-            {/* Inclusions */}
+            {/* 2. Places Covered (🆕 NEW SECTION) */}
+            {placesList.length > 0 && (
+              <div className="content-block">
+                <h3 className="text-2xl font-header text-white uppercase mb-6 flex items-center gap-3">
+                  <MapPin size={24} className="text-primary" /> Strategic Points
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {placesList.map((place, i) => (
+                    <span
+                      key={i}
+                      className="bg-white/5 border border-white/10 hover:border-primary/50 text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-default flex items-center gap-2"
+                    >
+                      <Hash size={14} className="text-gray-500" /> {place}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Itinerary Timeline (🆕 NEW SECTION) */}
+            {itineraryList.length > 0 && (
+              <div className="content-block">
+                <h3 className="text-2xl font-header text-white uppercase mb-8 flex items-center gap-3">
+                  <Milestone size={24} className="text-primary" /> Daily
+                  Operations
+                </h3>
+                <div className="relative border-l-2 border-white/10 ml-3 space-y-10">
+                  {itineraryList.map((day, i) => (
+                    <div key={i} className="relative pl-8 group">
+                      {/* Dot */}
+                      <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#1c1917] border-2 border-gray-600 group-hover:border-primary transition-colors" />
+
+                      {/* Content */}
+                      <div>
+                        <h4 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">
+                          Day {i + 1}
+                          {/* Optional: Add Title if your object has it, e.g., day.title */}
+                        </h4>
+                        <p className="text-gray-400 leading-relaxed text-sm">
+                          {typeof day === "string" ? day : day.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Inclusions (Improved Grid) */}
             <div className="content-block">
               <h3 className="text-2xl font-header text-white uppercase mb-6 flex items-center gap-3">
                 <CheckCircle size={24} className="text-primary" /> Gear &
@@ -361,7 +438,7 @@ const TourDetails = () => {
               )}
             </div>
 
-            {/* Team Info */}
+            {/* 5. Squad Protocol */}
             <div className="content-block bg-[#1c1917] p-8 rounded-3xl border border-white/10">
               <div className="flex items-start gap-4">
                 <Users className="text-gray-400 mt-1" size={24} />
@@ -378,9 +455,9 @@ const TourDetails = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: BOOKING CARD */}
+          {/* --- RIGHT COLUMN: BOOKING CARD (Sticky) --- */}
           <div className="lg:col-span-1">
-            <div className="content-block sticky top-24 bg-[#1c1917] p-8 rounded-3xl border border-white/10 shadow-2xl">
+            <div className="content-block sticky top-24 bg-[#1c1917] p-6 md:p-8 rounded-3xl border border-white/10 shadow-2xl">
               {/* STATUS ALERT: Completed/Ongoing/Closed */}
               {isBookingClosed ? (
                 <div className="mb-6 bg-slate-700/30 border border-slate-600/50 p-4 rounded-xl flex flex-col items-center justify-center gap-1 text-center">
