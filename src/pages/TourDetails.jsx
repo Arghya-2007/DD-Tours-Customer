@@ -186,12 +186,13 @@ const TourDetails = () => {
     };
   }
 
+  // 🔴 FIX: Changed 'trip' to 'tour' in this object
   const tripSchema = {
     "@context": "https://schema.org/",
     "@type": "Product",
-    name: trip.title,
-    image: trip.images?.[0]?.url,
-    description: trip.description?.substring(0, 150), // Google likes short descriptions
+    name: tour.title,
+    image: tour.images?.[0]?.url || images[0],
+    description: tour.description?.substring(0, 150),
     brand: {
       "@type": "Brand",
       name: "DD Tours",
@@ -200,13 +201,13 @@ const TourDetails = () => {
       "@type": "Offer",
       url: window.location.href,
       priceCurrency: "INR",
-      price: trip.price,
+      price: tour.price,
       availability: "https://schema.org/InStock",
       validFrom: new Date().toISOString(),
     },
     aggregateRating: {
       "@type": "AggregateRating",
-      ratingValue: "4.8", // You can calculate this dynamically if you have reviews
+      ratingValue: "4.8",
       reviewCount: "24",
     },
   };
@@ -216,12 +217,14 @@ const TourDetails = () => {
       ref={container}
       className="min-h-screen bg-[#0c0a09] text-gray-100 font-sans"
     >
+      {/* 🔴 FIX: Changed 'trip' to 'tour' in SEO props */}
       <SEO
-        title={trip.title}
-        description={`Book ${trip.title}. Duration: ${trip.duration} Days. Location: ${trip.location}. Starting at ₹${trip.price}. Verified Reviews & Secure Booking.`}
-        image={trip.images?.[0]?.url}
+        title={tour.title}
+        description={`Book ${tour.title}. Duration: ${tour.duration}. Location: ${tour.location}. Starting at ₹${tour.price}. Verified Reviews & Secure Booking.`}
+        image={tour.images?.[0]?.url || images[0]}
         schema={tripSchema}
       />
+
       {/* --- HERO SECTION --- */}
       <div className="hero-container relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-black">
         {images.map((img, index) => (
