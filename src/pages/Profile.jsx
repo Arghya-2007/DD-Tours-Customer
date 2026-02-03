@@ -23,7 +23,7 @@ import {
   Loader2,
   Smartphone,
   Star,
-  MessageCircle, // 🆕 Added for WhatsApp
+  MessageCircle,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -610,14 +610,15 @@ const Profile = () => {
         }}
       />
 
-      {/* 🚀 FIXED WHATSAPP SUPPORT BUTTON */}
+      {/* 🚀 FIXED WHATSAPP BUTTON (Moved UP to clear bottom nav) */}
       <a
         href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
-        aria-label="Contact Support"
+        className="fixed bottom-24 right-4 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
+        aria-label="Chat on WhatsApp"
       >
+        {/* Simple Icon on Mobile, Expandable on Desktop */}
         <MessageCircle size={24} className="md:w-7 md:h-7" fill="white" />
         <span className="hidden md:block max-w-0 overflow-hidden md:group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold text-sm">
           Have any problem? Tell us
