@@ -5,15 +5,26 @@ import {
   Instagram,
   MessageCircle as Message,
   Youtube,
-  Mail,
-  MapPin,
-  Phone,
 } from "lucide-react";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
+  // Configuration for Social Links (Easy to manage)
+  const socialLinks = [
+    {
+      icon: Instagram,
+      label: "Instagram",
+      href: "https://instagram.com/ddtours",
+    },
+    { icon: Message, label: "WhatsApp", href: "https://wa.me/919876543210" },
+    { icon: Facebook, label: "Facebook", href: "https://facebook.com/ddtours" },
+    { icon: Youtube, label: "YouTube", href: "https://youtube.com/@ddtours" },
+  ];
+
   return (
     <footer className="bg-[#0c0a09] border-t border-white/10 pt-20 pb-10 relative overflow-hidden">
-      {/* Background Texture */}
+      {/* Background Texture - Kept lightweight */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -31,13 +42,17 @@ const Footer = () => {
               map behind and follow your instinct.
             </p>
             <div className="flex gap-4">
-              {[Instagram, Message, Facebook, Youtube].map((Icon, i) => (
+              {socialLinks.map((social, i) => (
                 <a
                   key={i}
-                  href="#"
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // 🚀 ACCESSIBILITY FIX: Screen readers need this!
+                  aria-label={`Follow us on ${social.label}`}
                   className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-primary hover:scale-110 transition-all"
                 >
-                  <Icon size={18} />
+                  <social.icon size={18} />
                 </a>
               ))}
             </div>
@@ -97,9 +112,15 @@ const Footer = () => {
               Get exclusive expedition drops and guide tips.
             </p>
             <div className="flex flex-col gap-3">
+              <label htmlFor="email-signup" className="sr-only">
+                Email Address
+              </label>
               <input
+                id="email-signup"
                 type="email"
                 placeholder="Enter your email"
+                // 🚀 ACCESSIBILITY FIX: Input needs a label
+                aria-label="Email address for newsletter"
                 className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
               />
               <button className="bg-primary text-white font-bold py-3 rounded-lg hover:bg-orange-700 transition-colors">
@@ -112,15 +133,15 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
-            © 2024 DD Tours & Travels. All rights reserved.
+            © {currentYear} DD Tours & Travels. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-gray-500">
-            <a href="#" className="hover:text-white">
+            <Link to="/privacy" className="hover:text-white">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white">
+            </Link>
+            <Link to="/terms" className="hover:text-white">
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </div>
