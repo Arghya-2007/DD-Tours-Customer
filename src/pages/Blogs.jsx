@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import SEO from "../components/SEO"; // SEO Component
 import { Link } from "react-router-dom"; // For linking to Single Blog Page
 import api from "../services/api"; // Your Axios instance
 import {
