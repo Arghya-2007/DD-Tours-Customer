@@ -6,36 +6,35 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, ShieldCheck, Tent, Globe, Users } from "lucide-react";
 import SEO from "../components/SEO";
 
+// --- 1. IMPORT IMAGES DIRECTLY (The Correct Way) ---
+import heroImg from "../assets/images/hero.avif";
+import alpineImg from "../assets/images/alpine.avif";
+import jungleImg from "../assets/images/jungle.avif";
+import oceanImg from "../assets/images/ocean.avif";
+import desertImg from "../assets/images/desert.avif";
+import natureImg from "../assets/images/nature.avif";
+import groupImg from "../assets/images/group.avif";
+import kashmirImg from "../assets/images/kashmir.avif";
+import himalayaImg from "../assets/images/himalaya.avif";
+import saharaImg from "../assets/images/sahara.avif";
+import fallbackImg from "../assets/images/fallback.avif";
+
 // Register GSAP Plugin
 gsap.registerPlugin(ScrollTrigger);
 
-// --- RELIABLE IMAGE ASSETS ---
+// --- MAP IMPORTS TO OBJECT ---
 const IMAGES = {
-  hero: "./assets/images/hero.avif",
-  // Terrain Section
-  terrain_alpine:
-    "./assets/images/alpine.avif",
-  terrain_jungle:
-    "./assets/images/jungle.avif",
-  terrain_ocean:
-    "./assets/images/ocean.avif",
-  terrain_desert:
-    "./assets/images/desert.avif",
-  // Features Section
-  feat_nature:
-    "./assets/images/nature.avif",
-  feat_group:
-    "./assets/images/group.avif",
-  // Trending Section
-  trend_kashmir:
-    "./assets/images/kashmir.avif",
-  trend_himalaya:
-    "./assets/images/himalaya.avif",
-  trend_desert:
-    "./assets/images/sahara.avif",
-  // Fallback if anything breaks
-  fallback:
-    "./assets/images/fallback.avif",
+  hero: heroImg,
+  terrain_alpine: alpineImg,
+  terrain_jungle: jungleImg,
+  terrain_ocean: oceanImg,
+  terrain_desert: desertImg,
+  feat_nature: natureImg,
+  feat_group: groupImg,
+  trend_kashmir: kashmirImg,
+  trend_himalaya: himalayaImg,
+  trend_desert: saharaImg,
+  fallback: fallbackImg,
 };
 
 const Home = () => {
@@ -69,7 +68,6 @@ const Home = () => {
     },
   ];
 
-  // Helper: Prevents broken images
   const handleImageError = (e) => {
     e.target.src = IMAGES.fallback;
   };
@@ -90,8 +88,8 @@ const Home = () => {
         "-=0.5",
       );
 
-      // 2. Parallax Background
-      gsap.to(".hero-bg", {
+      // 2. Parallax Background (Updated for <img> tag)
+      gsap.to(".hero-img", {
         yPercent: 30,
         ease: "none",
         scrollTrigger: {
@@ -126,12 +124,20 @@ const Home = () => {
         ref={container}
         className="w-full min-h-screen bg-[#0c0a09] text-white relative overflow-hidden"
       >
-        {/* --- HERO SECTION --- */}
+        {/* --- HERO SECTION (Optimized for LCP) --- */}
         <div className="hero-section relative h-screen w-full flex items-center justify-center overflow-hidden">
-          <div
-            className="hero-bg absolute inset-0 w-full h-[120%] -top-[10%] bg-cover bg-center z-0"
-            style={{ backgroundImage: `url(${IMAGES.hero})` }}
-          >
+          {/* ⚡ PERFORMANCE FIX: 
+             Using an <img> tag instead of background-image allows the browser 
+             to download it faster (LCP Score improvement).
+          */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={IMAGES.hero}
+              alt="Adventure Expedition"
+              className="hero-img w-full h-[120%] object-cover -mt-[5%]" // Slightly larger for parallax
+              fetchPriority="high" // 👈 Critical for Mobile Score
+              loading="eager" // 👈 Don't lazy load the hero!
+            />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-[#0c0a09]" />
           </div>
 
@@ -190,7 +196,7 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- WHY WE ARE DIFFERENT (Fixed Images) --- */}
+        {/* --- WHY WE ARE DIFFERENT --- */}
         <div className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <h4 className="text-primary uppercase tracking-widest font-bold mb-3">
@@ -198,9 +204,7 @@ const Home = () => {
             </h4>
             <h2 className="text-5xl font-header">Why We Are Different</h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Main Large Card */}
             <div className="service-card md:col-span-2 bg-[#1c1917] p-10 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-primary/30 transition-colors">
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center text-primary mb-6">
@@ -214,9 +218,9 @@ const Home = () => {
                   every booking goes directly to local conservation projects.
                 </p>
               </div>
-              {/* FIXED IMAGE */}
               <img
                 src={IMAGES.feat_nature}
+                loading="lazy"
                 onError={handleImageError}
                 className="absolute right-0 top-0 w-2/3 h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-500"
                 style={{
@@ -226,7 +230,6 @@ const Home = () => {
               />
             </div>
 
-            {/* Side Card 1 */}
             <div className="service-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors group">
               <ShieldCheck
                 size={40}
@@ -239,7 +242,6 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Side Card 2 */}
             <div className="service-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors group">
               <Tent
                 size={40}
@@ -251,7 +253,6 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Bottom Wide Card */}
             <div className="service-card md:col-span-2 bg-[#1c1917] p-10 rounded-3xl border border-white/5 flex flex-col md:flex-row items-center gap-8 hover:border-primary/30 transition-colors">
               <div className="flex-1">
                 <Users size={40} className="text-primary mb-6" />
@@ -264,9 +265,9 @@ const Home = () => {
                 </p>
               </div>
               <div className="w-full md:w-64 h-40 bg-white/5 rounded-2xl overflow-hidden relative">
-                {/* FIXED IMAGE */}
                 <img
                   src={IMAGES.feat_group}
+                  loading="lazy"
                   onError={handleImageError}
                   alt="Small group hiking"
                   className="object-cover w-full h-full hover:scale-110 transition-transform duration-700"
@@ -276,9 +277,8 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- CHOOSE YOUR TERRAIN (Fixed Images) --- */}
+        {/* --- CHOOSE YOUR TERRAIN --- */}
         <div className="relative py-32 overflow-hidden">
-          {/* Dynamic Backgrounds (Fixed Links) */}
           {categories.map((cat, i) => (
             <div
               key={cat.id}
@@ -292,12 +292,10 @@ const Home = () => {
             />
           ))}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0c0a09] via-[#0c0a09]/80 to-transparent" />
-
           <div className="relative z-10 max-w-7xl mx-auto px-6">
             <h2 className="text-6xl font-header mb-16 text-center">
               Choose Your Terrain
             </h2>
-
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {categories.map((cat, i) => (
                 <div
@@ -305,34 +303,25 @@ const Home = () => {
                   onMouseEnter={() => setActiveCategory(i)}
                   className="cursor-pointer group relative h-[400px] border-r border-white/20 last:border-0 p-6 flex flex-col justify-end overflow-hidden"
                 >
-                  {/* 1. BACKGROUND IMAGE (New) */}
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                     style={{ backgroundImage: `url(${cat.img})` }}
                   />
-
-                  {/* 2. DARK GRADIENT OVERLAY (New) - Makes text readable */}
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30 transition-opacity duration-300 ${activeCategory === i ? "opacity-80" : "opacity-90"}`}
                   />
-
-                  {/* 3. ACTIVE BORDER (Optional Polish) */}
                   <div
                     className={`absolute inset-0 border-2 border-primary/50 transition-all duration-300 ${activeCategory === i ? "opacity-100" : "opacity-0"}`}
                   />
-
-                  {/* 4. CONTENT (Added z-10 to sit on top of image) */}
                   <div className="relative z-10">
                     <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2 group-hover:translate-y-0 duration-300">
                       <ArrowRight className="text-primary" />
                     </div>
-
                     <h3
                       className={`text-3xl font-header mb-2 transition-colors ${activeCategory === i ? "text-primary" : "text-white"}`}
                     >
                       {cat.name}
                     </h3>
-
                     <p className="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0">
                       {cat.desc}
                     </p>
@@ -343,7 +332,7 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- TRENDING EXPEDITIONS (Fixed Images & Syntax) --- */}
+        {/* --- TRENDING EXPEDITIONS --- */}
         <div className="py-24 px-6 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12">
             <div>
@@ -359,7 +348,6 @@ const Home = () => {
               View All Packages
             </Link>
           </div>
-
           <div className="cards-grid grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
@@ -386,20 +374,17 @@ const Home = () => {
                 key={idx}
                 className="trip-card group block relative h-[500px] rounded-3xl overflow-hidden cursor-pointer border border-white/5 hover:border-primary/50 transition-all shadow-2xl"
               >
-                {/* Image with Error Handling */}
                 <img
                   src={trip.img}
                   alt={trip.title}
+                  loading="lazy"
                   onError={handleImageError}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                {/* Corrected Gradient Syntax */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
-
                 <div className="absolute top-6 right-6 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-sm font-bold">
                   {trip.days}
                 </div>
-
                 <div className="absolute bottom-0 left-0 p-8 w-full translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                   <h3 className="text-3xl font-header text-white mb-2">
                     {trip.title}
@@ -423,7 +408,6 @@ const Home = () => {
           <div className="bg-gradient-to-br from-[#1c1917] to-black border border-white/10 rounded-[3rem] p-16 relative overflow-hidden max-w-6xl mx-auto">
             <div className="absolute -top-40 -left-40 w-96 h-96 bg-primary/20 rounded-full blur-[100px]" />
             <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#84cc16]/10 rounded-full blur-[100px]" />
-
             <h2 className="relative z-10 text-5xl md:text-7xl font-header mb-6">
               Your Story Starts Here
             </h2>
