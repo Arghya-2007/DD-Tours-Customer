@@ -453,7 +453,7 @@ const Home = () => {
               href="https://chat.whatsapp.com/G4oa0OLQNfXFsmmlY687V8"
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-10 bg-white text-black px-12 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform inline-block"
+              className="relative z-10 bg-white text-black px-12 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform inline-block hover:shadow-xl hover:bg-gray-200 hover:shadow-primary/50"
             >
               Join The Club
             </a>
