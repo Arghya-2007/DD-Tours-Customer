@@ -21,7 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Milestone,
-  MessageCircle, // 🆕 Imported for WhatsApp
+  MessageCircle,
 } from "lucide-react";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -222,6 +222,7 @@ const TourDetails = () => {
     },
   };
 
+  // WhatsApp Link Helper
   const whatsappLink = `https://wa.me/919679812235?text=${encodeURIComponent(`Hi DD Tours, I have a query about the ${tour.title} trip.`)}`;
 
   return (
@@ -388,14 +389,14 @@ const TourDetails = () => {
               </div>
             )}
 
-            {/* 4. Inclusions (Improved Grid Layout for Mobile) */}
+            {/* 4. Inclusions (FIXED MOBILE LAYOUT) */}
             <div className="content-block">
               <h3 className="text-2xl font-header text-white uppercase mb-6 flex items-center gap-3">
                 <CheckCircle size={24} className="text-primary" /> Gear &
                 Provisions
               </h3>
               {inclusionsList.length > 0 ? (
-                // 🔴 UPDATED: grid-cols-2 for mobile (was grid-cols-1) + smaller padding
+                // 🔴 2-Column Grid on Mobile (grid-cols-2) with tighter gap
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
                   {inclusionsList.map((item, i) => (
                     <div
@@ -520,16 +521,17 @@ const TourDetails = () => {
         </div>
       </div>
 
-      {/* 🚀 NEW: FLOATING WHATSAPP BUTTON (Fixed Bottom Right) */}
+      {/* 🚀 FIXED WHATSAPP BUTTON (Mobile Optimized) */}
       <a
         href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
         aria-label="Chat on WhatsApp"
       >
-        <MessageCircle size={28} fill="white" className="text-green-500" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold">
+        <MessageCircle size={24} className="md:w-7 md:h-7" fill="white" />
+        {/* Text hidden on Mobile to prevent layout shifts/overflow */}
+        <span className="hidden md:block max-w-0 overflow-hidden md:group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold text-sm">
           Chat with us
         </span>
       </a>
