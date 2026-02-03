@@ -2,14 +2,17 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 
 const SEO = ({ title, description, image, url, type = "website", schema }) => {
+  // 🛠️ CONFIG: Default values for your site
   const siteTitle = "DD Tours | Elite Adventure Expeditions";
-  const currentTitle = title ? `${title} | DD Tours` : siteTitle;
-  const currentDesc =
-    description ||
+  const siteUrl = "https://ddtours.in"; // Replace with your actual domain if different
+  const defaultDescription =
     "Join elite expeditions across India. Trekking in Himalayas, Jungle Survival, and Desert Safaris. Verified reviews and seamless booking.";
-  const siteUrl = "https://ddtours.in"; // ⚠️ REPLACE with your actual domain
+  const defaultImage = `${siteUrl}/images/social-img.webp`;
+  // Logic: Use provided props OR fall back to defaults
+  const currentTitle = title ? `${title} | DD Tours` : siteTitle;
+  const currentDesc = description || defaultDescription;
   const currentUrl = url || window.location.href;
-  const currentImage = image || `${siteUrl}/images/social-share.jpg`; // Make sure this image exists in public/images/
+  const currentImage = image || defaultImage;
 
   return (
     <Helmet>
@@ -32,7 +35,7 @@ const SEO = ({ title, description, image, url, type = "website", schema }) => {
       <meta name="twitter:description" content={currentDesc} />
       <meta name="twitter:image" content={currentImage} />
 
-      {/* 4. Structured Data (JSON-LD) for Rich Snippets */}
+      {/* 4. Structured Data (Rich Snippets) */}
       {schema && (
         <script type="application/ld+json">{JSON.stringify(schema)}</script>
       )}
