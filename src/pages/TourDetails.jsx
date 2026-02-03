@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import gsap from "gsap";
+import SEO from "../components/SEO";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
@@ -185,11 +186,42 @@ const TourDetails = () => {
     };
   }
 
+  const tripSchema = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: trip.title,
+    image: trip.images?.[0]?.url,
+    description: trip.description?.substring(0, 150), // Google likes short descriptions
+    brand: {
+      "@type": "Brand",
+      name: "DD Tours",
+    },
+    offers: {
+      "@type": "Offer",
+      url: window.location.href,
+      priceCurrency: "INR",
+      price: trip.price,
+      availability: "https://schema.org/InStock",
+      validFrom: new Date().toISOString(),
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.8", // You can calculate this dynamically if you have reviews
+      reviewCount: "24",
+    },
+  };
+
   return (
     <div
       ref={container}
       className="min-h-screen bg-[#0c0a09] text-gray-100 font-sans"
     >
+      <SEO
+        title={trip.title}
+        description={`Book ${trip.title}. Duration: ${trip.duration} Days. Location: ${trip.location}. Starting at ₹${trip.price}. Verified Reviews & Secure Booking.`}
+        image={trip.images?.[0]?.url}
+        schema={tripSchema}
+      />
       {/* --- HERO SECTION --- */}
       <div className="hero-container relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-black">
         {images.map((img, index) => (

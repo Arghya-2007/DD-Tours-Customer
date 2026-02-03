@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Compass, ArrowLeft, ShieldCheck, Mountain } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import SEO from "../components/SEO";
 
 const Login = () => {
   const { user, loginWithGoogle } = useAuth();
@@ -63,6 +64,11 @@ const Login = () => {
       ref={container}
       className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#0c0a09]"
     >
+      <SEO
+        title="Login to DD Tours and Travels Basecamp"
+        description="Securely log in to access classified expedition data and manage your profile."
+        url="https://ddtours.in/login"
+      />
       {/* --- BACKGROUND ASSETS --- */}
       <div
         className="login-bg absolute inset-0 z-0 bg-cover bg-center opacity-40"

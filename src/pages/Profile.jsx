@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { generateTicket } from "../utils/generateTicket";
 import api from "../services/api";
+import SEO from "../components/SEO";
 import RatingModal from "../components/RatingModal"; // Ensure this path is correct
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -197,6 +198,10 @@ const Profile = () => {
       ref={container}
       className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 pb-20 overflow-hidden font-sans"
     >
+      <SEO
+        title="Customer and User Profile"
+        description="Manage your operative profile, view trip logs, and update personal information securely."
+      />
       <Toaster
         position="bottom-right"
         toastOptions={{ style: { background: "#333", color: "#fff" } }}

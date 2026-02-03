@@ -274,6 +274,11 @@ const Booking = () => {
 
   return (
     <div className="min-h-screen bg-[#0c0a09] text-gray-200 py-12 px-6 font-sans">
+      <SEO
+        title={`Confirm Booking - ${trip.title}`}
+        description={`Secure your seat for the ${trip.title} expedition. Fill in your details and choose a payment method to confirm your booking with DD Tours & Travels.`}
+        url="https://ddtours.in/booking"
+      />
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
         {/* --- LEFT: BOOKING FORM --- */}
         <div className="lg:col-span-2 space-y-8">

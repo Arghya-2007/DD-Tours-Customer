@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import gsap from "gsap";
+import SEO from "../components/SEO";
 import { useGSAP } from "@gsap/react";
 import {
   MapPin,
@@ -151,6 +152,11 @@ const AllTrips = () => {
       ref={container}
       className="min-h-screen bg-[#0c0a09] p-6 md:p-12 overflow-hidden font-sans"
     >
+      <SEO
+        title="Explore Expeditions"
+        description="Browse our exclusive adventure packages. From Himalayan treks to Desert safaris. Compare prices, dates, and itineraries for your next Indian expedition."
+        url="https://ddtours.in/tours"
+      />
       {/* --- HEADER --- */}
       <div className="max-w-7xl mx-auto mb-12">
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/10 pb-8">

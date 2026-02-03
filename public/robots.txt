@@ -1,0 +1,19 @@
+# Robot.txt for DD Tours
+
+User-agent: *
+Allow: /
+
+# --- Block Private User Areas ---
+# We don't want Google indexing user profiles or login screens
+Disallow: /profile/
+Disallow: /login/
+Disallow: /bookings/
+Disallow: /settings/
+
+# --- Block Admin Panel ---
+# Keep the command center private
+Disallow: /admin/
+
+# --- Sitemap Location ---
+# This tells Google exactly where your map is
+Sitemap: https://ddtours.in/sitemap.xml

@@ -78,6 +78,11 @@ const Blogs = () => {
       ref={container}
       className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 md:p-12 overflow-hidden"
     >
+      <SEO
+        title="Field Journal - Intelligence & Insights"
+        description="Dispatches from the front lines of adventure. Expert gear reviews, survival protocols, and mission reports."
+        url="https://ddtours.in/blogs"
+      />
       {/* --- HEADER --- */}
       <div className="blog-header max-w-7xl mx-auto mb-16 border-b border-white/10 pb-10">
         <div className="flex items-center gap-2 text-primary mb-4">

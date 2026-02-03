@@ -120,7 +120,8 @@ const About = () => {
     >
       <SEO
         title="About Us"
-        description="Learn more about DD Tours, the adventure travel company that crafts unforgettable expeditions in India's most remote regions."
+        description="Learn more about DD Tours and Travels, the adventure travel company that crafts unforgettable expeditions in India's most remote regions."
+        url="https://ddtours.in/about"
       />
       {/* --- 1. HERO SECTION --- */}
       <div className="hero-container relative h-[80vh] flex items-center justify-center overflow-hidden">

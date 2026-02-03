@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Home, FileText, Download, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import SEO from "../components/SEO.jsx";
 
 const Success = () => {
   const location = useLocation();
@@ -57,6 +58,12 @@ const Success = () => {
 
   return (
     <div className="min-h-screen bg-[#0c0a09] flex items-center justify-center p-6 relative overflow-hidden">
+
+      <SEO
+        title="Booking Success - Deep Dive Travel"
+        description="Your expedition has been successfully secured with Deep Dive Travel."
+        url="https://ddtours.in/success"
+      />
       {/* Background Glow */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[100px]" />

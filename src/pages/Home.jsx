@@ -119,7 +119,8 @@ const Home = () => {
     <>
       <SEO
         title="Home"
-        description="Experience the thrill of India's best adventure tours. Book trekking, camping, and survival expeditions with DD Tours."
+        description="Experience the thrill of India's best adventure tours. Book trekking, camping, and survival expeditions with DD Tours and Travels."
+        url="https://ddtours.in"
       />
       <div
         ref={container}
