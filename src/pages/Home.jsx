@@ -11,31 +11,31 @@ gsap.registerPlugin(ScrollTrigger);
 
 // --- RELIABLE IMAGE ASSETS ---
 const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2670&auto=format&fit=crop",
+  hero: "./assets/hero.avif",
   // Terrain Section
   terrain_alpine:
-    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2000&auto=format&fit=crop",
+    "./assets/alpine.avif",
   terrain_jungle:
-    "https://images.unsplash.com/photo-1549366021-9f761d450615?q=80&w=2000&auto=format&fit=crop",
+    "./assets/jungle.avif",
   terrain_ocean:
-    "https://images.unsplash.com/photo-1666344486104-21fa6fd9ae79?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "./assets/ocean.avif",
   terrain_desert:
-    "https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=1176&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "./assets/desert.avif",
   // Features Section
   feat_nature:
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1500&auto=format&fit=crop",
+    "./assets/nature.avif",
   feat_group:
-    "https://images.unsplash.com/photo-1501555088652-021faa106b9b?q=80&w=1000&auto=format&fit=crop",
+    "./assets/group.avif",
   // Trending Section
   trend_kashmir:
-    "https://images.unsplash.com/photo-1566837497312-7be7830ae9b1?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "./assets/kashmir.avif",
   trend_himalaya:
-    "https://images.unsplash.com/photo-1572109801525-0bb0272e8579?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "./assets/himalaya.avif",
   trend_desert:
-    "https://plus.unsplash.com/premium_photo-1661962428918-6a57ab674e23?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "./assets/sahara.avif",
   // Fallback if anything breaks
   fallback:
-    "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2000&auto=format&fit=crop",
+    "./assets/fallback.avif",
 };
 
 const Home = () => {
