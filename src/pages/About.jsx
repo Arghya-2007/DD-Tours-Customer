@@ -12,6 +12,12 @@ import {
   Linkedin,
   Twitter,
   Mail,
+  Map,
+  Truck,
+  FileText,
+  Coffee,
+  Tent,
+  Users,
 } from "lucide-react";
 import SEO from "../components/SEO";
 
@@ -59,7 +65,7 @@ const About = () => {
         },
       );
 
-      // 4. Feature Cards (The Operative Code) - FIXED
+      // 4. Feature Cards
       gsap.fromTo(
         ".feature-card",
         { opacity: 0, y: 60, rotationX: -15 },
@@ -78,7 +84,39 @@ const About = () => {
         },
       );
 
-      // 5. Founders Section Stagger
+      // 5. NEW: Protocol Timeline Animation
+      gsap.fromTo(
+        ".protocol-step",
+        { x: -50, opacity: 0 },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.3,
+          scrollTrigger: {
+            trigger: ".protocol-section",
+            start: "top 70%",
+          },
+        },
+      );
+
+      // 6. NEW: Logistics Cards
+      gsap.fromTo(
+        ".logistics-card",
+        { y: 50, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.2,
+          scrollTrigger: {
+            trigger: ".logistics-section",
+            start: "top 80%",
+          },
+        },
+      );
+
+      // 7. Founders Section Stagger
       gsap.fromTo(
         ".founder-profile",
         { y: 100, opacity: 0 },
@@ -95,7 +133,7 @@ const About = () => {
         },
       );
 
-      // 6. CTA Box
+      // 8. CTA Box
       gsap.fromTo(
         ".cta-box",
         { scale: 0.8, opacity: 0 },
@@ -116,13 +154,14 @@ const About = () => {
   return (
     <div
       ref={container}
-      className="bg-[#0c0a09] min-h-screen text-gray-200 overflow-hidden"
+      className="bg-[#0c0a09] min-h-screen text-gray-200 overflow-hidden font-sans"
     >
       <SEO
         title="About Us"
-        description="Learn more about DD Tours and Travels, the adventure travel company that crafts unforgettable expeditions in India's most remote regions."
+        description="Learn about DD Tours and Travels - Our process, our logistics, and our commitment to adventure."
         url="https://ddtours.in/about"
       />
+
       {/* --- 1. HERO SECTION --- */}
       <div className="hero-container relative h-[80vh] flex items-center justify-center overflow-hidden">
         <div
@@ -197,18 +236,150 @@ const About = () => {
         </div>
       </div>
 
-      {/* --- 3. CORE VALUES --- */}
-      <div className="bg-[#141210] py-24 features-grid">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* --- 3. THE PROTOCOL (HOW WE WORK) --- */}
+      <div className="bg-[#141210] py-24 protocol-section overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-5xl font-header text-white uppercase">
-              The Operative Code
+              The Protocol
             </h2>
             <p className="text-gray-500 mt-4 tracking-widest">
-              WHY THE WILD TRUSTS US
+              HOW WE EXECUTE A MISSION
             </p>
           </div>
 
+          <div className="relative border-l-2 border-primary/20 ml-6 md:ml-1/2 space-y-16">
+            {/* Step 1 */}
+            <div className="protocol-step relative pl-12 md:pl-0 md:grid md:grid-cols-2 gap-12 items-center">
+              <div className="md:text-right md:pr-12">
+                <h3 className="text-2xl font-header text-white mb-2">
+                  01. Recon & Initiation
+                </h3>
+                <p className="text-gray-400">
+                  You select your target coordinates (Tour). We confirm
+                  availability and slots. A dedicated mission manager contacts
+                  you via WhatsApp for initial briefing.
+                </p>
+              </div>
+              <div className="absolute left-[-9px] top-0 md:left-1/2 md:-ml-[9px] w-4 h-4 bg-primary rounded-full shadow-[0_0_20px_rgba(234,88,12,0.8)]" />
+              <div className="hidden md:block pl-12">
+                <FileText size={48} className="text-white/20" />
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="protocol-step relative pl-12 md:pl-0 md:grid md:grid-cols-2 gap-12 items-center">
+              <div className="hidden md:block md:text-right md:pr-12">
+                <Map size={48} className="text-white/20 ml-auto" />
+              </div>
+              <div className="absolute left-[-9px] top-0 md:left-1/2 md:-ml-[9px] w-4 h-4 bg-[#1c1917] border-2 border-primary rounded-full" />
+              <div className="md:pl-12">
+                <h3 className="text-2xl font-header text-white mb-2">
+                  02. Gear Check & Briefing
+                </h3>
+                <p className="text-gray-400">
+                  48 hours before deployment, you receive the final dossier:
+                  Weather reports, packing checklist, and pickup coordinates.
+                  Permits are processed by our ground team.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="protocol-step relative pl-12 md:pl-0 md:grid md:grid-cols-2 gap-12 items-center">
+              <div className="md:text-right md:pr-12">
+                <h3 className="text-2xl font-header text-white mb-2">
+                  03. Deployment
+                </h3>
+                <p className="text-gray-400">
+                  We deploy Union Cabs (Bolero/Innova) for terrain mastery. Our
+                  convoys move in formation. Safety checks happen every 4 hours.
+                </p>
+              </div>
+              <div className="absolute left-[-9px] top-0 md:left-1/2 md:-ml-[9px] w-4 h-4 bg-[#1c1917] border-2 border-primary rounded-full" />
+              <div className="hidden md:block pl-12">
+                <Truck size={48} className="text-white/20" />
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="protocol-step relative pl-12 md:pl-0 md:grid md:grid-cols-2 gap-12 items-center">
+              <div className="hidden md:block md:text-right md:pr-12">
+                <Users size={48} className="text-white/20 ml-auto" />
+              </div>
+              <div className="absolute left-[-9px] top-0 md:left-1/2 md:-ml-[9px] w-4 h-4 bg-primary rounded-full" />
+              <div className="md:pl-12">
+                <h3 className="text-2xl font-header text-white mb-2">
+                  04. The Experience
+                </h3>
+                <p className="text-gray-400">
+                  No scripted tourist traps. We explore hidden valleys, eat at
+                  local homes, and stay in curated properties that blend luxury
+                  with the wild.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- 4. OPERATIONAL LOGISTICS --- */}
+      <div className="py-24 px-6 logistics-section">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-header text-white uppercase">
+              Operational Logistics
+            </h2>
+            <p className="text-gray-500 mt-2">OUR HARDWARE & PROVISIONS</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="logistics-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors">
+              <Truck size={40} className="text-primary mb-6" />
+              <h3 className="text-2xl font-header text-white mb-3">
+                The Fleet
+              </h3>
+              <p className="text-gray-400 leading-relaxed text-sm">
+                We strictly use <strong>Union Registered Vehicles</strong>{" "}
+                (Innova, Bolero, Tempo Traveller). Drivers are
+                mountain-certified veterans with 10+ years of high-altitude
+                experience. No private cars, no risks.
+              </p>
+            </div>
+
+            {/* Card 2 */}
+            <div className="logistics-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors">
+              <Tent size={40} className="text-primary mb-6" />
+              <h3 className="text-2xl font-header text-white mb-3">
+                Basecamps
+              </h3>
+              <p className="text-gray-400 leading-relaxed text-sm">
+                From <strong>Swiss Tents</strong> in Ladakh to{" "}
+                <strong>Heritage Houseboats</strong> in Kashmir. We pre-book
+                premium properties that offer hot water, electric blankets, and
+                hygiene in remote zones.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="logistics-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors">
+              <Coffee size={40} className="text-primary mb-6" />
+              <h3 className="text-2xl font-header text-white mb-3">Rations</h3>
+              <p className="text-gray-400 leading-relaxed text-sm">
+                We prioritize <strong>Fresh, Hot, Hygienic</strong> meals (MAP
+                Plan). While we encourage local cuisine tasting, we ensure
+                standard comfort food (Dal, Rice, Roti, Sabzi) is always
+                available.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- 5. CORE VALUES --- */}
+      <div className="bg-[#141210] py-24 features-grid">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard
               icon={ShieldCheck}
@@ -229,7 +400,7 @@ const About = () => {
         </div>
       </div>
 
-      {/* --- 4. FOUNDERS & CO-FOUNDERS SECTION --- */}
+      {/* --- 6. FOUNDERS & CO-FOUNDERS SECTION --- */}
       <div className="max-w-7xl mx-auto py-32 px-6 founders-section">
         <div className="text-center mb-20">
           <h2 className="text-5xl font-header text-white uppercase">
@@ -258,7 +429,7 @@ const About = () => {
         </div>
       </div>
 
-      {/* --- 5. CTA SECTION --- */}
+      {/* --- 7. CTA SECTION --- */}
       <div className="py-32 px-6 text-center">
         <div className="cta-box bg-gradient-to-br from-primary to-orange-700 p-16 md:p-24 rounded-[4rem] max-w-5xl mx-auto relative overflow-hidden shadow-2xl">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
