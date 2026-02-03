@@ -136,10 +136,10 @@ const Footer = () => {
             © {currentYear} DD Tours & Travels. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-gray-500">
-            <Link to="/privacy" className="hover:text-white">
+            <Link to="/profile" className="hover:text-white">
               Privacy Policy
             </Link>
-            <Link to="/terms" className="hover:text-white">
+            <Link to="/profile" className="hover:text-white">
               Terms of Service
             </Link>
           </div>
