@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, ShieldCheck, Tent, Globe, Users } from "lucide-react";
+import SEO from "../components/SEO";
 
 // Register GSAP Plugin
 gsap.registerPlugin(ScrollTrigger);
@@ -119,6 +120,10 @@ const Home = () => {
       ref={container}
       className="w-full min-h-screen bg-[#0c0a09] text-white relative overflow-hidden"
     >
+      <SEO
+        title="Home"
+        description="Experience the thrill of India's best adventure tours. Book trekking, camping, and survival expeditions with DD Tours."
+      />
       {/* --- HERO SECTION --- */}
       <div className="hero-section relative h-screen w-full flex items-center justify-center overflow-hidden">
         <div

@@ -13,6 +13,7 @@ import {
   Twitter,
   Mail,
 } from "lucide-react";
+import SEO from "../components/SEO";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -117,6 +118,10 @@ const About = () => {
       ref={container}
       className="bg-[#0c0a09] min-h-screen text-gray-200 overflow-hidden"
     >
+      <SEO
+        title="About Us"
+        description="Learn more about DD Tours, the adventure travel company that crafts unforgettable expeditions in India's most remote regions."
+      />
       {/* --- 1. HERO SECTION --- */}
       <div className="hero-container relative h-[80vh] flex items-center justify-center overflow-hidden">
         <div
