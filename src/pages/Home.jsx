@@ -11,31 +11,31 @@ gsap.registerPlugin(ScrollTrigger);
 
 // --- RELIABLE IMAGE ASSETS ---
 const IMAGES = {
-  hero: "./assets/hero.avif",
+  hero: "./assets/images/hero.avif",
   // Terrain Section
   terrain_alpine:
-    "./assets/alpine.avif",
+    "./assets/images/alpine.avif",
   terrain_jungle:
-    "./assets/jungle.avif",
+    "./assets/images/jungle.avif",
   terrain_ocean:
-    "./assets/ocean.avif",
+    "./assets/images/ocean.avif",
   terrain_desert:
-    "./assets/desert.avif",
+    "./assets/images/desert.avif",
   // Features Section
   feat_nature:
-    "./assets/nature.avif",
+    "./assets/images/nature.avif",
   feat_group:
-    "./assets/group.avif",
+    "./assets/images/group.avif",
   // Trending Section
   trend_kashmir:
-    "./assets/kashmir.avif",
+    "./assets/images/kashmir.avif",
   trend_himalaya:
-    "./assets/himalaya.avif",
+    "./assets/images/himalaya.avif",
   trend_desert:
-    "./assets/sahara.avif",
+    "./assets/images/sahara.avif",
   // Fallback if anything breaks
   fallback:
-    "./assets/fallback.avif",
+    "./assets/images/fallback.avif",
 };
 
 const Home = () => {
