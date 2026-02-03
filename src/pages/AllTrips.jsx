@@ -17,6 +17,8 @@ import {
   Car,
   Quote, // New Icon
   Star,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 
 // --- Helper: Robust Image Extractor ---
@@ -45,36 +47,111 @@ const getDaysLeft = (deadline) => {
 };
 
 const AllTrips = () => {
+  // --- STATE: Data ---
   const [tours, setTours] = useState([]);
-  const [reviews, setReviews] = useState([]); // 🆕 State for Reviews
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const container = useRef();
 
+  // --- STATE: Trips Pagination ---
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const LIMIT = 6;
+
+  // --- STATE: Reviews Pagination ---
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsHasMore, setReviewsHasMore] = useState(true);
+  const [isFetchingReviews, setIsFetchingReviews] = useState(false);
+  const REVIEWS_LIMIT = 6;
+
+  // --- 1. INITIAL FETCH ---
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
-        // Parallel Fetch: Trips + Reviews
+        // Fetch Page 1 for both endpoints
         const [tripsRes, reviewsRes] = await Promise.all([
-          api.get(`/trips?_t=${Date.now()}`),
-          api.get(`/reviews/recent?_t=${Date.now()}`),
+          api.get(`/trips?page=1&limit=${LIMIT}&_t=${Date.now()}`),
+          api.get(
+            `/reviews/recent?page=1&limit=${REVIEWS_LIMIT}&_t=${Date.now()}`,
+          ),
         ]);
 
+        // Process Trips
         const tripsData = Array.isArray(tripsRes.data)
           ? tripsRes.data
           : tripsRes.data.trips || [];
-
         setTours(tripsData);
-        setReviews(reviewsRes.data || []);
+        if (tripsData.length < LIMIT) setHasMore(false);
+
+        // Process Reviews
+        const reviewsData = Array.isArray(reviewsRes.data)
+          ? reviewsRes.data
+          : reviewsRes.data.reviews || [];
+        setReviews(reviewsData);
+        if (reviewsData.length < REVIEWS_LIMIT) setReviewsHasMore(false);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchInitialData();
   }, []);
+
+  // --- 2. LOAD MORE TRIPS ---
+  const loadMoreTrips = async () => {
+    if (isFetchingMore || !hasMore) return;
+    try {
+      setIsFetchingMore(true);
+      const nextPage = page + 1;
+      const res = await api.get(`/trips?page=${nextPage}&limit=${LIMIT}`);
+      const newTrips = Array.isArray(res.data)
+        ? res.data
+        : res.data.trips || [];
+
+      if (newTrips.length > 0) {
+        setTours((prev) => [...prev, ...newTrips]);
+        setPage(nextPage);
+        if (newTrips.length < LIMIT) setHasMore(false);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching more trips:", error);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
+
+  // --- 3. LOAD MORE REVIEWS ---
+  const loadMoreReviews = async () => {
+    if (isFetchingReviews || !reviewsHasMore) return;
+    try {
+      setIsFetchingReviews(true);
+      const nextPage = reviewsPage + 1;
+      const res = await api.get(
+        `/reviews/recent?page=${nextPage}&limit=${REVIEWS_LIMIT}`,
+      );
+      const newReviews = Array.isArray(res.data)
+        ? res.data
+        : res.data.reviews || [];
+
+      if (newReviews.length > 0) {
+        setReviews((prev) => [...prev, ...newReviews]);
+        setReviewsPage(nextPage);
+        if (newReviews.length < REVIEWS_LIMIT) setReviewsHasMore(false);
+      } else {
+        setReviewsHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error fetching more reviews:", error);
+    } finally {
+      setIsFetchingReviews(false);
+    }
+  };
 
   const filteredTours = tours.filter((tour) => {
     const term = searchTerm.toLowerCase();
@@ -104,59 +181,29 @@ const AllTrips = () => {
         ease: "sine.inOut",
       });
 
-      if (!loading) {
-        // Animate Cards
-        if (filteredTours.length > 0) {
-          gsap.fromTo(
-            ".trip-card",
-            { y: 60, opacity: 0, rotateX: -15, transformOrigin: "top center" },
-            {
-              y: 0,
-              opacity: 1,
-              rotateX: 0,
-              duration: 0.8,
-              stagger: { amount: 0.6, grid: "auto", from: "start" },
-              ease: "back.out(1.2)",
-            },
-          );
-        }
-
-        // Animate Reviews
-        if (reviews.length > 0) {
-          gsap.fromTo(
-            ".review-card",
-            { x: 50, opacity: 0 },
-            {
-              x: 0,
-              opacity: 1,
-              duration: 0.8,
-              stagger: 0.2,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: ".reviews-section",
-                start: "top 80%",
-              },
-            },
-          );
-        }
+      if (!loading && filteredTours.length > 0) {
+        // Subtle fade in for cards when data loads
+        gsap.fromTo(
+          ".trip-card-anim",
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, clearProps: "all" },
+        );
       }
     },
-    {
-      scope: container,
-      dependencies: [loading, filteredTours.length, reviews.length],
-    },
+    { scope: container, dependencies: [loading, filteredTours.length > 0] },
   );
 
   return (
     <div
       ref={container}
-      className="min-h-screen bg-[#0c0a09] p-6 md:p-12 overflow-hidden font-sans"
+      className="min-h-screen bg-[#0c0a09] p-6 md:p-12 overflow-x-hidden font-sans"
     >
       <SEO
         title="Explore Expeditions"
         description="Browse our exclusive adventure packages. From Himalayan treks to Desert safaris. Compare prices, dates, and itineraries for your next Indian expedition."
         url="https://ddtours.in/tours"
       />
+
       {/* --- HEADER --- */}
       <div className="max-w-7xl mx-auto mb-12">
         <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/10 pb-8">
@@ -194,8 +241,13 @@ const AllTrips = () => {
         </div>
       </div>
 
-      {/* --- TRIPS GRID --- */}
+      {/* --- TRIPS SECTION --- */}
       <div className="max-w-7xl mx-auto mb-24">
+        {/* Mobile Swipe Hint */}
+        <div className="md:hidden flex items-center gap-2 text-gray-500 text-xs uppercase tracking-widest mb-4 animate-pulse">
+          <span>Swipe to explore</span> <ChevronRight size={14} />
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((n) => (
@@ -206,123 +258,178 @@ const AllTrips = () => {
             ))}
           </div>
         ) : filteredTours.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000">
-            {filteredTours.map((tour) => {
-              const daysLeft = getDaysLeft(tour.bookingDeadline);
-              const isCompleted = tour.status === "completed";
-              const isOngoing = tour.status === "ongoing";
+          <>
+            {/* LAYOUT STRATEGY:
+                Mobile: Flex + Overflow-X (Horizontal Scroll)
+                Desktop: Grid (Vertical Layout)
+             */}
+            <div
+              className="
+                flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide -mx-6 px-6 
+                md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:overflow-visible md:pb-0 md:mx-0 md:px-0
+             "
+            >
+              {filteredTours.map((tour) => {
+                const daysLeft = getDaysLeft(tour.bookingDeadline);
+                const isCompleted = tour.status === "completed";
+                const isOngoing = tour.status === "ongoing";
 
-              return (
-                <Link
-                  to={`/tours/${tour._id || tour.id}`}
-                  key={tour._id || tour.id}
-                  className={`trip-card group block bg-[#1c1917] rounded-3xl overflow-hidden border transition-all duration-500 flex flex-col h-full
+                return (
+                  <Link
+                    to={`/tours/${tour._id || tour.id}`}
+                    key={tour._id || tour.id}
+                    className={`
+                        trip-card-anim group block bg-[#1c1917] rounded-3xl overflow-hidden border transition-all duration-500 flex flex-col h-full
+                        min-w-[85vw] snap-center md:min-w-0 md:snap-align-none
                         ${isCompleted ? "border-white/5 opacity-70 grayscale" : "border-white/5 hover:border-primary/40 hover:shadow-[0_20px_50px_rgba(234,88,12,0.15)]"}
-                        `}
-                >
-                  <div className="relative h-64 overflow-hidden shrink-0">
-                    <img
-                      src={getTourImage(tour)}
-                      alt={tour.title}
-                      className="relative w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
-                      onError={(e) => {
-                        e.target.src =
-                          "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070";
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1c1917] via-transparent to-transparent opacity-90" />
+                      `}
+                  >
+                    <div className="relative h-64 overflow-hidden shrink-0">
+                      <img
+                        src={getTourImage(tour)}
+                        alt={tour.title}
+                        className="relative w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#1c1917] via-transparent to-transparent opacity-90" />
 
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                        <Clock size={12} className="text-primary" />
-                        {tour.duration}
-                      </span>
-                    </div>
+                      {/* Badges */}
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                          <Clock size={12} className="text-primary" />
+                          {tour.duration}
+                        </span>
+                      </div>
 
-                    <div className="absolute top-4 right-4">
-                      {isCompleted ? (
-                        <span className="bg-slate-700/80 backdrop-blur-md border border-slate-500 text-slate-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
-                          <CheckCircle2 size={12} /> Completed
-                        </span>
-                      ) : isOngoing ? (
-                        <span className="bg-blue-600/80 backdrop-blur-md border border-blue-400 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
-                          <Car size={12} /> Ongoing
-                        </span>
-                      ) : daysLeft && daysLeft !== "Closed" ? (
-                        <span className="bg-red-500/60 backdrop-blur-md border border-red-500/80 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
-                          <AlertTriangle size={12} /> {daysLeft}
-                        </span>
-                      ) : tour.bookingEndsIn ? (
-                        <span className="bg-orange-500/60 backdrop-blur-md border border-orange-500/80 text-orange-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
-                          <AlertTriangle size={12} /> {tour.bookingEndsIn}
-                        </span>
-                      ) : null}
-                    </div>
+                      <div className="absolute top-4 right-4">
+                        {isCompleted ? (
+                          <span className="bg-slate-700/80 backdrop-blur-md border border-slate-500 text-slate-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full">
+                            <CheckCircle2 size={12} /> Completed
+                          </span>
+                        ) : isOngoing ? (
+                          <span className="bg-blue-600/80 backdrop-blur-md border border-blue-400 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
+                            <Car size={12} /> Ongoing
+                          </span>
+                        ) : daysLeft && daysLeft !== "Closed" ? (
+                          <span className="bg-red-500/60 backdrop-blur-md border border-red-500/80 text-red-200 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-1.5 rounded-full animate-pulse">
+                            <AlertTriangle size={12} /> {daysLeft}
+                          </span>
+                        ) : null}
+                      </div>
 
-                    <div className="absolute bottom-4 left-4">
-                      {tour.fixedDate ? (
-                        <span className="bg-emerald-900/80 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                          <Calendar size={12} />
-                          {new Date(tour.fixedDate).toLocaleDateString(
-                            undefined,
-                            { day: "2-digit", month: "short" },
-                          )}
-                        </span>
-                      ) : (
-                        <span className="bg-blue-900/80 backdrop-blur-md border border-blue-500/30 text-blue-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
-                          <Compass size={12} />
-                          Flexible
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-7 flex flex-col flex-1 relative">
-                    <div className="space-y-1 mb-4">
-                      <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
-                        {tour.title}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                        <MapPin size={14} className="text-primary" />
-                        <span className="line-clamp-1 tracking-wide">
-                          {tour.location || "Classified Location"}
-                        </span>
+                      <div className="absolute bottom-4 left-4">
+                        {tour.fixedDate ? (
+                          <span className="bg-emerald-900/80 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                            <Calendar size={12} />
+                            {new Date(tour.fixedDate).toLocaleDateString(
+                              undefined,
+                              { day: "2-digit", month: "short" },
+                            )}
+                          </span>
+                        ) : (
+                          <span className="bg-blue-900/80 backdrop-blur-md border border-blue-500/30 text-blue-300 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 flex items-center gap-2 rounded-full">
+                            <Compass size={12} />
+                            Flexible
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 mb-6 min-h-[1.5rem]">
-                      {tour.placesCovered?.slice(0, 3).map((place, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] font-bold text-gray-400 uppercase bg-white/5 border border-white/5 px-2 py-1 rounded flex items-center gap-1"
+                    <div className="p-7 flex flex-col flex-1 relative">
+                      <div className="space-y-1 mb-4">
+                        <h3 className="text-2xl font-header text-white uppercase group-hover:text-primary transition-colors duration-300 line-clamp-1">
+                          {tour.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-gray-500 text-sm">
+                          <MapPin size={14} className="text-primary" />
+                          <span className="line-clamp-1 tracking-wide">
+                            {tour.location || "Classified Location"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mb-6 min-h-[1.5rem]">
+                        {tour.placesCovered?.slice(0, 3).map((place, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] font-bold text-gray-400 uppercase bg-white/5 border border-white/5 px-2 py-1 rounded flex items-center gap-1"
+                          >
+                            <Hash size={8} className="text-gray-600" /> {place}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-6 mt-auto" />
+
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-1">
+                            Investment
+                          </p>
+                          <p className="text-2xl md:text-3xl font-header text-white">
+                            ₹{Number(tour.price).toLocaleString()}
+                          </p>
+                        </div>
+                        <div
+                          className={`relative w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white transition-all duration-500 transform group-hover:rotate-[-45deg] ${isCompleted ? "" : "group-hover:bg-primary group-hover:border-primary"}`}
                         >
-                          <Hash size={8} className="text-gray-600" /> {place}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-6 mt-auto" />
-
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-1">
-                          Investment
-                        </p>
-                        <p className="text-2xl md:text-3xl font-header text-white">
-                          ₹{Number(tour.price).toLocaleString()}
-                        </p>
-                      </div>
-                      <div
-                        className={`relative w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white transition-all duration-500 transform group-hover:rotate-[-45deg] ${isCompleted ? "" : "group-hover:bg-primary group-hover:border-primary"}`}
-                      >
-                        <ArrowRight size={22} />
+                          <ArrowRight size={22} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+
+              {/* MOBILE ONLY: Load More Card (Swipe to end) */}
+              {hasMore && (
+                <button
+                  onClick={loadMoreTrips}
+                  disabled={isFetchingMore}
+                  className="md:hidden min-w-[40vw] snap-center bg-[#1c1917] border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4 text-gray-400 active:scale-95 transition-transform"
+                >
+                  {isFetchingMore ? (
+                    <Loader2 className="animate-spin text-primary" />
+                  ) : (
+                    <ChevronRight size={32} />
+                  )}
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    Load More
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {/* DESKTOP ONLY: Load More Button */}
+            {hasMore && (
+              <div className="hidden md:flex justify-center mt-12">
+                <button
+                  onClick={loadMoreTrips}
+                  disabled={isFetchingMore}
+                  className="group relative px-8 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-primary hover:border-primary transition-all duration-300 disabled:opacity-50"
+                >
+                  <span className="relative z-10 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white">
+                    {isFetchingMore ? (
+                      <>
+                        Loading <Loader2 size={16} className="animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        Load More Expeditions{" "}
+                        <ArrowRight
+                          size={16}
+                          className="group-hover:translate-x-1 transition-transform"
+                        />
+                      </>
+                    )}
+                  </span>
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-32 border border-dashed border-white/10 rounded-[2.5rem] bg-white/5">
             <h3 className="text-2xl font-header text-white mb-2 uppercase tracking-widest">
@@ -335,7 +442,7 @@ const AllTrips = () => {
         )}
       </div>
 
-      {/* --- REVIEWS: EXECUTIVE DESIGN --- */}
+      {/* --- REVIEWS SECTION --- */}
       {reviews.length > 0 && (
         <div className="reviews-section max-w-7xl mx-auto border-t border-white/10 pt-20">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
@@ -350,22 +457,34 @@ const AllTrips = () => {
                 Explorer Chronicles
               </h2>
             </div>
+            {/* Mobile Swipe Hint */}
+            <div className="md:hidden flex items-center gap-2 text-gray-500 text-xs uppercase tracking-widest animate-pulse">
+              <span>Swipe reports</span> <ChevronRight size={14} />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* REVIEWS LAYOUT: Horizontal Scroll (Mobile) | Grid (Desktop)
+           */}
+          <div
+            className="
+              flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide -mx-6 px-6 
+              md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-visible md:pb-0 md:mx-0 md:px-0
+          "
+          >
             {reviews.map((review) => (
               <div
                 key={review.id}
-                className="review-card group flex flex-col justify-between bg-[#141414] p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-all duration-300 relative"
+                className="
+                  review-card group flex flex-col justify-between bg-[#141414] p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-all duration-300 relative
+                  min-w-[85vw] snap-center md:min-w-0 md:snap-align-none
+                "
               >
-                {/* Decorative Quote Icon */}
                 <Quote
                   size={80}
                   className="absolute top-4 right-4 text-white/5 pointer-events-none rotate-12"
                 />
 
                 <div>
-                  {/* 1. HEADER: User & Rating */}
                   <div className="flex items-center gap-4 mb-6">
                     <img
                       src={
@@ -395,13 +514,11 @@ const AllTrips = () => {
                     </div>
                   </div>
 
-                  {/* 2. BODY: The Comment */}
                   <p className="text-gray-300 text-sm leading-7 mb-8 relative z-10 font-light">
                     "{review.comment}"
                   </p>
                 </div>
 
-                {/* 3. FOOTER: Trip Context (The "Professional" Touch) */}
                 <div className="mt-auto pt-6 border-t border-white/5">
                   <Link
                     to={`/tours/${review.tripId}`}
@@ -432,7 +549,53 @@ const AllTrips = () => {
                 </div>
               </div>
             ))}
+
+            {/* MOBILE ONLY: Load More Reviews Card */}
+            {reviewsHasMore && (
+              <button
+                onClick={loadMoreReviews}
+                disabled={isFetchingReviews}
+                className="md:hidden min-w-[40vw] snap-center bg-[#1c1917] border border-white/10 rounded-3xl flex flex-col items-center justify-center gap-4 text-gray-400 active:scale-95 transition-transform"
+              >
+                {isFetchingReviews ? (
+                  <Loader2 className="animate-spin text-primary" />
+                ) : (
+                  <ChevronRight size={32} />
+                )}
+                <span className="text-xs uppercase tracking-widest font-bold">
+                  More
+                </span>
+              </button>
+            )}
           </div>
+
+          {/* DESKTOP ONLY: Load More Reviews Button */}
+          {reviewsHasMore && (
+            <div className="hidden md:flex justify-center mt-12">
+              <button
+                onClick={loadMoreReviews}
+                disabled={isFetchingReviews}
+                className="group relative px-8 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-primary hover:border-primary transition-all duration-300 disabled:opacity-50"
+              >
+                <span className="relative z-10 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white">
+                  {isFetchingReviews ? (
+                    <>
+                      Loading Reports{" "}
+                      <Loader2 size={16} className="animate-spin" />
+                    </>
+                  ) : (
+                    <>
+                      Read More Stories{" "}
+                      <ArrowRight
+                        size={16}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
+                    </>
+                  )}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
