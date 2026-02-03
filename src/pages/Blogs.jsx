@@ -161,13 +161,15 @@ const Blogs = () => {
                   </div>
 
                   <div className="mt-8 flex items-center justify-between">
-                    <Link
-                      to={`/blogs/${blog.id}`}
-                      className="flex items-center gap-2 text-white font-bold text-xs uppercase tracking-widest group-hover:gap-4 transition-all"
+                    <div
+                      className="flex items-center gap-2 text-white font-bold text-xs uppercase tracking-widest group-hover:gap-4 transition-all cursor-pointer"
+                      onClick={() => {
+                        window.open(blog.facebookUrl, "_blank");
+                      }}
                     >
                       Read Report{" "}
                       <ArrowRight size={16} className="text-primary" />
-                    </Link>
+                    </div>
 
                     {/* 🆕 VIDEO LINKS SECTION */}
                     <div className="flex gap-3">
