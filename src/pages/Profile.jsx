@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { generateTicket } from "../utils/generateTicket";
 import api from "../services/api";
 import SEO from "../components/SEO";
-import RatingModal from "../components/RatingModal"; // Ensure this path is correct
+import RatingModal from "../components/RatingModal";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -23,6 +23,7 @@ import {
   Loader2,
   Smartphone,
   Star,
+  MessageCircle, // 🆕 Added for WhatsApp
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -80,7 +81,7 @@ const Profile = () => {
 
     return {
       id: b.id || b._id,
-      tripId: b.tripId || liveTrip._id || b.trip?._id, // Critical for Reviews
+      tripId: b.tripId || liveTrip._id || b.trip?._id,
       title: liveTrip.title || b.tripTitle || "Unknown Expedition",
       displayDate: dateStr,
       isDateFixed: isDateFixed,
@@ -181,6 +182,9 @@ const Profile = () => {
     (e.target.src = `https://ui-avatars.com/api/?name=${user?.displayName || "User"}&background=ea580c&color=fff`);
   const isProfileComplete = profileData?.phone && profileData?.aadharNo;
 
+  // WhatsApp Support Link
+  const whatsappLink = `https://wa.me/919679812235?text=${encodeURIComponent(`Hi DD Tours, I have a problem with my booking/profile. User ID: ${user?.uid}`)}`;
+
   if (loading)
     return (
       <div className="flex justify-center items-center h-screen bg-[#0c0a09]">
@@ -196,7 +200,7 @@ const Profile = () => {
   return (
     <div
       ref={container}
-      className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 pb-20 overflow-hidden font-sans"
+      className="min-h-screen bg-[#0c0a09] text-gray-200 p-6 pb-24 overflow-hidden font-sans"
     >
       <SEO
         title="Customer and User Profile"
@@ -429,7 +433,6 @@ const Profile = () => {
                               <span className="text-xs text-center text-emerald-500 font-bold uppercase tracking-wider bg-emerald-500/10 py-2 px-2 rounded-lg border border-emerald-500/20">
                                 Trip Completed
                               </span>
-                              {/* 🔴 FIXED: Button simply updates state. No Modal nested here. */}
                               <button
                                 onClick={() =>
                                   setRatingModal({
@@ -492,6 +495,7 @@ const Profile = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-24 sm:pb-0">
+                {/* ... (Existing Form Fields remain same) ... */}
                 <div className="md:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 mb-2">
                   <img
                     src={getProfileImage()}
@@ -590,7 +594,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* ✅ HOISTED MODAL: This now sits OUTSIDE the loop */}
+      {/* ✅ HOISTED RATING MODAL */}
       <RatingModal
         isOpen={ratingModal.show}
         onClose={() =>
@@ -602,9 +606,23 @@ const Profile = () => {
         tripId={ratingModal.tripId}
         tripTitle={ratingModal.tripTitle}
         onSuccess={() => {
-          fetchUserData(); // Refresh data to update the UI
+          fetchUserData();
         }}
       />
+
+      {/* 🚀 FIXED WHATSAPP SUPPORT BUTTON */}
+      <a
+        href={whatsappLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
+        aria-label="Contact Support"
+      >
+        <MessageCircle size={24} className="md:w-7 md:h-7" fill="white" />
+        <span className="hidden md:block max-w-0 overflow-hidden md:group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold text-sm">
+          Have any problem? Tell us
+        </span>
+      </a>
     </div>
   );
 };
