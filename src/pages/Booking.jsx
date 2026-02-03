@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import SEO from "../components/SEO"; // 👈 Fixed: Was missing
 import {
   Calendar,
   Users,
@@ -18,6 +19,8 @@ import {
   Eye,
   CalendarDays,
   Clock,
+  Loader2, // 👈 Fixed: Better loader
+  FileText,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
@@ -46,7 +49,7 @@ const Booking = () => {
     fullName: "",
     phone: "",
     address: "",
-    aadharNo: "",
+    aadharNo: "", // 👈 Used in payload, now has an input field
   });
 
   const [isPhoneValid, setIsPhoneValid] = useState(null);
@@ -79,7 +82,7 @@ const Booking = () => {
         const tripData = tripRes.data.trip || tripRes.data;
         setTrip(tripData);
 
-        // --- SMART DATE LOGIC (Admin Driven) ---
+        // --- SMART DATE LOGIC ---
         if (tripData.fixedDate) {
           setScheduleValue(tripData.fixedDate);
         } else if (tripData.expectedMonth) {
@@ -131,15 +134,16 @@ const Booking = () => {
   };
 
   // 3. CALCULATIONS
-  const pricePerPerson = trip?.price || 0;
-  const taxes = pricePerPerson * guests * 0.03;
-  const totalAmount = pricePerPerson * guests + taxes;
+  // Safe calculation to avoid NaN
+  const pricePerPerson = trip?.price ? Number(trip.price) : 0;
+  const numGuests = parseInt(guests) || 1;
+  const taxes = pricePerPerson * numGuests * 0.03;
+  const totalAmount = pricePerPerson * numGuests + taxes;
 
   const handleInitialSubmit = (e) => {
     e.preventDefault();
     setError("");
-    if (!isPhoneValid)
-      return setError("A valid contact frequency (Phone) is required.");
+    if (!isPhoneValid) return setError("A valid contact number is required.");
 
     if (paymentMethod === "pay_on_arrival") {
       finalizeBooking();
@@ -155,9 +159,9 @@ const Booking = () => {
     const bookingPayload = {
       tripId: trip._id || trip.id,
       userId: user.uid,
-      seats: parseInt(guests),
+      seats: numGuests,
       tripTitle: trip.title,
-      bookingDate: scheduleValue, // Using the auto-set date
+      bookingDate: scheduleValue,
       totalAmount,
       userDetails: { ...userDetails, paymentMethod },
       isFixedDate: !!trip.fixedDate,
@@ -174,6 +178,7 @@ const Booking = () => {
         });
       } catch (err) {
         setError(err.response?.data?.message || "Booking failed.");
+        setShowPaymentModal(false);
       } finally {
         setSubmitting(false);
       }
@@ -188,6 +193,11 @@ const Booking = () => {
         throw new Error("Razorpay SDK failed to load. Check your internet.");
       }
 
+      // ⚠️ Check if Key ID Exists
+      if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+        throw new Error("Payment System Configuration Missing (Key ID).");
+      }
+
       const orderRes = await api.post("/payments/create-order", {
         amount: totalAmount,
       });
@@ -199,7 +209,7 @@ const Booking = () => {
         currency: orderData.currency,
         name: "DD Tours",
         description: `Expedition: ${trip.title}`,
-        image: "https://your-logo-url.com/logo.png",
+        image: "https://ddtours.in/logo.png", // Replace with your actual logo
         order_id: orderData.id,
         handler: async function (response) {
           try {
@@ -252,7 +262,7 @@ const Booking = () => {
       paymentObject.open();
     } catch (err) {
       console.error("Payment Error:", err);
-      setError("Payment initiation failed.");
+      setError(err.message || "Payment initiation failed.");
       setSubmitting(false);
       setPaymentProcessing(false);
       setShowPaymentModal(false);
@@ -267,8 +277,31 @@ const Booking = () => {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-[#0c0a09] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-[#0c0a09] flex items-center justify-center gap-2">
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <span className="text-gray-400 font-bold uppercase tracking-widest text-sm">
+          Accessing Secure Channel...
+        </span>
+      </div>
+    );
+
+  // 🛡️ Safe Guard: If ID is wrong
+  if (!trip)
+    return (
+      <div className="min-h-screen bg-[#0c0a09] flex flex-col items-center justify-center text-center p-6">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl text-white font-header mb-2">
+          Expedition Not Found
+        </h2>
+        <p className="text-gray-400 mb-6">
+          The coordinates you entered appear to be invalid.
+        </p>
+        <button
+          onClick={() => navigate("/tours")}
+          className="bg-white/10 text-white px-6 py-2 rounded-full hover:bg-white/20 transition-colors"
+        >
+          Return to Base
+        </button>
       </div>
     );
 
@@ -276,9 +309,9 @@ const Booking = () => {
     <div className="min-h-screen bg-[#0c0a09] text-gray-200 py-12 px-6 font-sans">
       <SEO
         title={`Confirm Booking - ${trip.title}`}
-        description={`Secure your seat for the ${trip.title} expedition. Fill in your details and choose a payment method to confirm your booking with DD Tours & Travels.`}
-        url="https://ddtours.in/booking"
+        description={`Secure your seat for the ${trip.title} expedition.`}
       />
+
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
         {/* --- LEFT: BOOKING FORM --- */}
         <div className="lg:col-span-2 space-y-8">
@@ -309,7 +342,7 @@ const Booking = () => {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* --- READ ONLY SCHEDULE DISPLAY (ADMIN CONTROLLED) --- */}
+                {/* --- READ ONLY SCHEDULE DISPLAY --- */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Launch Schedule
@@ -350,12 +383,6 @@ const Booking = () => {
                       </>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    *{" "}
-                    {trip.fixedDate
-                      ? "Date is locked by Mission Control."
-                      : "Exact dates will be communicated upon confirmation."}
-                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -411,7 +438,7 @@ const Booking = () => {
                     )}
                     {isPhoneValid === false && (
                       <span className="text-red-500 text-[10px] flex items-center gap-1">
-                        <AlertCircle size={10} /> Invalid Format
+                        <AlertCircle size={10} /> Invalid
                       </span>
                     )}
                   </label>
@@ -431,16 +458,32 @@ const Booking = () => {
                       value={userDetails.phone}
                       onChange={handleUserChange}
                     />
-                    {isPhoneValid === true && (
-                      <CheckCircle
-                        className="absolute right-4 top-4 text-green-500"
-                        size={20}
-                      />
-                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
+                {/* 🆕 ADDED MISSING AADHAR FIELD */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    Aadhar Number
+                  </label>
+                  <div className="relative">
+                    <FileText
+                      className="absolute left-4 top-4 text-gray-500"
+                      size={20}
+                    />
+                    <input
+                      type="text"
+                      name="aadharNo"
+                      placeholder="Required for permits"
+                      required
+                      className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pl-12 text-white focus:border-primary outline-none"
+                      value={userDetails.aadharNo}
+                      onChange={handleUserChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
                     Address
                   </label>
@@ -528,7 +571,7 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* --- RESTORED: WHATSAPP DISCUSSION OPTION --- */}
+            {/* --- WHATSAPP DISCUSSION OPTION --- */}
             <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="bg-green-500 p-2 rounded-full text-black">
@@ -571,7 +614,7 @@ const Booking = () => {
           </form>
         </div>
 
-        {/* --- RIGHT: ORDER SUMMARY (Restored) --- */}
+        {/* --- RIGHT: ORDER SUMMARY --- */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 bg-[#1c1917] p-6 rounded-3xl border border-white/10 shadow-2xl">
             {/* FOMO BADGE */}
@@ -585,7 +628,6 @@ const Booking = () => {
 
             <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 border border-white/10">
-                {/* Fallback Image Logic */}
                 <img
                   src={
                     trip.images?.[0]?.url ||
