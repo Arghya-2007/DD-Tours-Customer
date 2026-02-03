@@ -6,7 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, ShieldCheck, Tent, Globe, Users } from "lucide-react";
 import SEO from "../components/SEO";
 
-// --- 1. IMPORT IMAGES DIRECTLY (The Correct Way) ---
+// --- 1. IMPORT LARGE IMAGES (Desktop) ---
 import heroImg from "../assets/images/hero.avif";
 import alpineImg from "../assets/images/alpine.avif";
 import jungleImg from "../assets/images/jungle.avif";
@@ -19,21 +19,34 @@ import himalayaImg from "../assets/images/himalaya.avif";
 import saharaImg from "../assets/images/sahara.avif";
 import fallbackImg from "../assets/images/fallback.avif";
 
+// --- 2. IMPORT SMALL IMAGES (Mobile) ---
+// ⚠️ Ensure these files exist in your folder!
+import heroSmall from "../assets/images/hero-small.avif";
+import alpineSmall from "../assets/images/alpine-small.avif";
+import jungleSmall from "../assets/images/jungle-small.avif";
+import oceanSmall from "../assets/images/ocean-small.avif";
+import desertSmall from "../assets/images/desert-small.avif";
+import natureSmall from "../assets/images/nature-small.avif";
+import groupSmall from "../assets/images/group-small.avif";
+import kashmirSmall from "../assets/images/kashmir-small.avif";
+import himalayaSmall from "../assets/images/himalaya-small.avif";
+import saharaSmall from "../assets/images/sahara-small.avif";
+
 // Register GSAP Plugin
 gsap.registerPlugin(ScrollTrigger);
 
-// --- MAP IMPORTS TO OBJECT ---
+// --- MAP IMPORTS TO RESPONSIVE OBJECTS ---
 const IMAGES = {
-  hero: heroImg,
-  terrain_alpine: alpineImg,
-  terrain_jungle: jungleImg,
-  terrain_ocean: oceanImg,
-  terrain_desert: desertImg,
-  feat_nature: natureImg,
-  feat_group: groupImg,
-  trend_kashmir: kashmirImg,
-  trend_himalaya: himalayaImg,
-  trend_desert: saharaImg,
+  hero: { large: heroImg, small: heroSmall },
+  terrain_alpine: { large: alpineImg, small: alpineSmall },
+  terrain_jungle: { large: jungleImg, small: jungleSmall },
+  terrain_ocean: { large: oceanImg, small: oceanSmall },
+  terrain_desert: { large: desertImg, small: desertSmall },
+  feat_nature: { large: natureImg, small: natureSmall },
+  feat_group: { large: groupImg, small: groupSmall },
+  trend_kashmir: { large: kashmirImg, small: kashmirSmall },
+  trend_himalaya: { large: himalayaImg, small: himalayaSmall },
+  trend_desert: { large: saharaImg, small: saharaSmall },
   fallback: fallbackImg,
 };
 
@@ -88,7 +101,7 @@ const Home = () => {
         "-=0.5",
       );
 
-      // 2. Parallax Background (Updated for <img> tag)
+      // 2. Parallax Background
       gsap.to(".hero-img", {
         yPercent: 30,
         ease: "none",
@@ -100,15 +113,17 @@ const Home = () => {
         },
       });
 
-      // 3. Service Cards Animation
-      gsap.utils.toArray(".service-card").forEach((card) => {
-        gsap.from(card, {
-          opacity: 0,
-          y: 50,
-          duration: 0.8,
-          scrollTrigger: { trigger: card, start: "top 85%" },
+      // 3. Service Cards Animation (Mobile Check: Disable if screen is small)
+      if (window.innerWidth > 768) {
+        gsap.utils.toArray(".service-card").forEach((card) => {
+          gsap.from(card, {
+            opacity: 0,
+            y: 50,
+            duration: 0.8,
+            scrollTrigger: { trigger: card, start: "top 85%" },
+          });
         });
-      });
+      }
     },
     { scope: container },
   );
@@ -124,24 +139,27 @@ const Home = () => {
         ref={container}
         className="w-full min-h-screen bg-[#0c0a09] text-white relative overflow-hidden"
       >
-        {/* --- HERO SECTION (Optimized for LCP) --- */}
+        {/* --- HERO SECTION --- */}
         <div className="hero-section relative h-screen w-full flex items-center justify-center overflow-hidden">
-          {/* ⚡ PERFORMANCE FIX: 
-             Using an <img> tag instead of background-image allows the browser 
-             to download it faster (LCP Score improvement).
-          */}
           <div className="absolute inset-0 z-0">
+            {/* 🚀 OPTIMIZATION: Using srcSet for Mobile/Desktop Switching */}
             <img
-              src={IMAGES.hero}
+              src={IMAGES.hero.large}
+              srcSet={`${IMAGES.hero.small} 600w, ${IMAGES.hero.large} 1920w`}
+              sizes="100vw"
               alt="Adventure Expedition"
-              className="hero-img w-full h-[120%] object-cover -mt-[5%]" // Slightly larger for parallax
-              fetchPriority="high" // 👈 Critical for Mobile Score
-              loading="eager" // 👈 Don't lazy load the hero!
+              className="hero-img w-full h-[120%] object-cover -mt-[5%]"
+              fetchPriority="high" // Critical for LCP
+              loading="eager" // Load immediately
+              width="1920" // Prevent layout shift
+              height="1080"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-[#0c0a09]" />
           </div>
 
           <div className="relative z-10 text-center max-w-5xl px-6 mt-16">
+            {/* ... Hero Text Content (Same as before) ... */}
             <div className="flex justify-center mb-6">
               <div className="hero-text flex items-center gap-2 px-4 py-1 rounded-full border border-white/20 bg-white/5 backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -205,6 +223,7 @@ const Home = () => {
             <h2 className="text-5xl font-header">Why We Are Different</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Nature */}
             <div className="service-card md:col-span-2 bg-[#1c1917] p-10 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-primary/30 transition-colors">
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center text-primary mb-6">
@@ -219,7 +238,9 @@ const Home = () => {
                 </p>
               </div>
               <img
-                src={IMAGES.feat_nature}
+                src={IMAGES.feat_nature.large}
+                srcSet={`${IMAGES.feat_nature.small} 400w, ${IMAGES.feat_nature.large} 800w`}
+                sizes="(max-width: 768px) 100vw, 50vw"
                 loading="lazy"
                 onError={handleImageError}
                 className="absolute right-0 top-0 w-2/3 h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-500"
@@ -230,6 +251,7 @@ const Home = () => {
               />
             </div>
 
+            {/* Small Cards (Icons only, lightweight) */}
             <div className="service-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors group">
               <ShieldCheck
                 size={40}
@@ -241,7 +263,6 @@ const Home = () => {
                 24/7.
               </p>
             </div>
-
             <div className="service-card bg-[#1c1917] p-8 rounded-3xl border border-white/5 hover:border-primary/30 transition-colors group">
               <Tent
                 size={40}
@@ -253,6 +274,7 @@ const Home = () => {
               </p>
             </div>
 
+            {/* Card 4: Groups */}
             <div className="service-card md:col-span-2 bg-[#1c1917] p-10 rounded-3xl border border-white/5 flex flex-col md:flex-row items-center gap-8 hover:border-primary/30 transition-colors">
               <div className="flex-1">
                 <Users size={40} className="text-primary mb-6" />
@@ -261,12 +283,14 @@ const Home = () => {
                 </h3>
                 <p className="text-gray-400 text-lg">
                   We cap our groups at 15 - 25 explorers to ensure an intimate,
-                  immersive experience. No megaphones, no crowds.
+                  immersive experience.
                 </p>
               </div>
               <div className="w-full md:w-64 h-40 bg-white/5 rounded-2xl overflow-hidden relative">
                 <img
-                  src={IMAGES.feat_group}
+                  src={IMAGES.feat_group.large}
+                  srcSet={`${IMAGES.feat_group.small} 300w, ${IMAGES.feat_group.large} 600w`}
+                  sizes="(max-width: 768px) 100vw, 25vw"
                   loading="lazy"
                   onError={handleImageError}
                   alt="Small group hiking"
@@ -277,14 +301,14 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- CHOOSE YOUR TERRAIN --- */}
+        {/* --- CHOOSE YOUR TERRAIN (Using Large for Full Quality, but lazy loaded) --- */}
         <div className="relative py-32 overflow-hidden">
           {categories.map((cat, i) => (
             <div
               key={cat.id}
               className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${activeCategory === i ? "opacity-40" : "opacity-0"}`}
               style={{
-                backgroundImage: `url(${cat.img})`,
+                backgroundImage: `url(${cat.img.large})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 filter: "grayscale(50%)",
@@ -305,7 +329,9 @@ const Home = () => {
                 >
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
-                    style={{ backgroundImage: `url(${cat.img})` }}
+                    style={{
+                      backgroundImage: `url(${cat.img.small})` /* Use small for thumbnail bg */,
+                    }}
                   />
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30 transition-opacity duration-300 ${activeCategory === i ? "opacity-80" : "opacity-90"}`}
@@ -332,8 +358,9 @@ const Home = () => {
           </div>
         </div>
 
-        {/* --- TRENDING EXPEDITIONS --- */}
+        {/* --- TRENDING EXPEDITIONS (Optimized Cards) --- */}
         <div className="py-24 px-6 max-w-7xl mx-auto">
+          {/* ... Header Text ... */}
           <div className="flex flex-col md:flex-row justify-between items-end mb-12">
             <div>
               <h4 className="text-primary uppercase tracking-widest font-bold mb-2">
@@ -348,6 +375,7 @@ const Home = () => {
               View All Packages
             </Link>
           </div>
+
           <div className="cards-grid grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
@@ -374,13 +402,19 @@ const Home = () => {
                 key={idx}
                 className="trip-card group block relative h-[500px] rounded-3xl overflow-hidden cursor-pointer border border-white/5 hover:border-primary/50 transition-all shadow-2xl"
               >
+                {/* 🚀 RESPONSIVE IMAGE CARD */}
                 <img
-                  src={trip.img}
+                  src={trip.img.large}
+                  srcSet={`${trip.img.small} 400w, ${trip.img.large} 800w`}
+                  sizes="(max-width: 768px) 100vw, 33vw"
                   alt={trip.title}
                   loading="lazy"
                   onError={handleImageError}
+                  width="400"
+                  height="500"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
                 <div className="absolute top-6 right-6 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-sm font-bold">
                   {trip.days}
