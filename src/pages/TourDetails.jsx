@@ -532,7 +532,7 @@ const TourDetails = () => {
         {/* Simple Icon on Mobile, Expandable on Desktop */}
         <MessageCircle size={24} className="md:w-7 md:h-7" fill="white" />
         <span className="hidden md:block max-w-0 overflow-hidden md:group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold text-sm">
-          Chat with us
+          any inquiry! Chat with us
         </span>
       </a>
     </div>
