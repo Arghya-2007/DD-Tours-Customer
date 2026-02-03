@@ -222,13 +222,12 @@ const TourDetails = () => {
     },
   };
 
-  // WhatsApp Link Helper
   const whatsappLink = `https://wa.me/919679812235?text=${encodeURIComponent(`Hi DD Tours, I have a query about the ${tour.title} trip.`)}`;
 
   return (
     <div
       ref={container}
-      className="min-h-screen bg-[#0c0a09] text-gray-100 font-sans"
+      className="min-h-screen bg-[#0c0a09] text-gray-100 font-sans pb-24"
     >
       <SEO
         title={tour.title}
@@ -364,7 +363,7 @@ const TourDetails = () => {
               </div>
             )}
 
-            {/* Itinerary */}
+            {/* Itinerary Timeline */}
             {itineraryList.length > 0 && (
               <div className="content-block">
                 <h3 className="text-2xl font-header text-white uppercase mb-8 flex items-center gap-3">
@@ -389,24 +388,25 @@ const TourDetails = () => {
               </div>
             )}
 
-            {/* 4. Inclusions (FIXED MOBILE LAYOUT) */}
+            {/* 4. GEAR & PROVISIONS (FIXED COMPACT GRID) */}
             <div className="content-block">
               <h3 className="text-2xl font-header text-white uppercase mb-6 flex items-center gap-3">
                 <CheckCircle size={24} className="text-primary" /> Gear &
                 Provisions
               </h3>
               {inclusionsList.length > 0 ? (
-                // 🔴 2-Column Grid on Mobile (grid-cols-2) with tighter gap
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+                // 🚀 FIXED: grid-cols-2 for Mobile, Compact Padding (p-3)
+                <div className="grid grid-cols-2 gap-3">
                   {inclusionsList.map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-3 bg-[#1c1917] p-3 rounded-xl border border-white/10 hover:border-primary/40 transition-colors group"
+                      className="flex items-center gap-2 bg-[#1c1917] p-3 rounded-lg border border-white/10 hover:border-primary/40 transition-colors group"
                     >
-                      <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary group-hover:bg-white" />
-                      </div>
-                      <span className="text-gray-300 text-sm font-medium group-hover:text-white transition-colors line-clamp-1">
+                      <CheckCircle2
+                        size={16}
+                        className="text-primary shrink-0 group-hover:text-white transition-colors"
+                      />
+                      <span className="text-gray-300 text-xs md:text-sm font-medium group-hover:text-white transition-colors line-clamp-1">
                         {item}
                       </span>
                     </div>
@@ -521,16 +521,16 @@ const TourDetails = () => {
         </div>
       </div>
 
-      {/* 🚀 FIXED WHATSAPP BUTTON (Mobile Optimized) */}
+      {/* 🚀 FIXED WHATSAPP BUTTON (Moved UP to clear bottom nav) */}
       <a
         href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
+        className="fixed bottom-24 right-4 z-50 bg-green-500 hover:bg-green-600 text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(34,197,94,0.4)] transition-all hover:scale-110 group flex items-center gap-2"
         aria-label="Chat on WhatsApp"
       >
+        {/* Simple Icon on Mobile, Expandable on Desktop */}
         <MessageCircle size={24} className="md:w-7 md:h-7" fill="white" />
-        {/* Text hidden on Mobile to prevent layout shifts/overflow */}
         <span className="hidden md:block max-w-0 overflow-hidden md:group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap font-bold text-sm">
           Chat with us
         </span>
