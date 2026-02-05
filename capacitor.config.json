@@ -1,0 +1,6 @@
+{
+  "appId": "com.ddtours.app",
+  "appName": "DD Tours and Travels",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
